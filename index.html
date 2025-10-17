@@ -2,18 +2,23 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Web Code Editor</title>
+    <title>DXCode - Pre-Upload Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="editor-container">
-        <div id="sidebar">ファイルエクスプローラー</div>
-        <div id="main-content">
-            <div id="tab-bar">タブ</div>
-            <textarea id="code-input" wrap="off"></textarea>
-            <pre id="code-output"><code class="language-html"></code></pre>
+        <div id="sidebar">
+            <button id="new-file-btn">+ New File</button>
+            <ul id="file-list"></ul> </div>
+        <div id="editor-wrapper">
+            <div id="tab-bar"></div>
+            <div id="monaco-editor"></div>
         </div>
     </div>
-    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
