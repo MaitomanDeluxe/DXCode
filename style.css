@@ -1,0 +1,107 @@
+:root {
+    --bg-primary: #1e1e1e;       /* メイン背景 */
+    --bg-secondary: #252526;     /* エディタ背景 */
+    --sidebar-bg: #333333;       /* サイドバー背景 */
+    --text-color: #cccccc;       /* テキスト色 */
+    --accent-color: #007acc;     /* アクセント色 (青) */
+    --border-color: #444444;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', 'Consolas', 'Fira Code', monospace;
+}
+
+html, body, #editor-container {
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--bg-primary);
+}
+
+#editor-container {
+    display: flex;
+}
+
+/* --- サイドバー --- */
+#sidebar {
+    width: 250px;
+    background-color: var(--sidebar-bg);
+    color: var(--text-color);
+    padding: 10px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+#sidebar h2 {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+#new-file-btn, #download-zip-btn {
+    padding: 8px;
+    margin-bottom: 5px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 1em;
+}
+
+#file-list {
+    list-style: none;
+    flex-grow: 1;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+#file-list li {
+    padding: 5px 0;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#file-list li.active {
+    background-color: var(--bg-primary);
+    border-left: 2px solid var(--accent-color);
+    padding-left: 8px;
+}
+
+/* --- エディタエリア --- */
+#editor-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+#tab-bar {
+    height: 35px;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    overflow-x: auto;
+}
+
+.tab {
+    padding: 8px 15px;
+    border-right: 1px solid var(--border-color);
+    color: var(--text-color);
+    cursor: pointer;
+    background-color: var(--bg-primary);
+    white-space: nowrap;
+}
+
+.tab.active {
+    background-color: var(--bg-secondary);
+    border-top: 2px solid var(--accent-color);
+    margin-top: -1px;
+}
+
+#monaco-editor {
+    flex-grow: 1;
+}
