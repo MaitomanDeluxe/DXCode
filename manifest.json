@@ -1,12 +1,15 @@
 {
     "name": "DXCode Editor",
     "short_name": "DXCode",
-    "description": "Pre-upload code editor for GitHub",
+    "description": "Pre-upload code editor for GitHub projects.",
     "start_url": "./index.html",
+    "scope": "./",
     "display": "standalone",
+    "orientation": "any",
     "background_color": "#1e1e1e",
     "theme_color": "#007acc",
     "icons": [
-        // アイコン定義 (PWAとして必須)
+        {"src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png"}
     ]
 }
