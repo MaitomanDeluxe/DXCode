@@ -1,0 +1,12 @@
+{
+    "name": "DXCode Editor",
+    "short_name": "DXCode",
+    "description": "Pre-upload code editor for GitHub",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#1e1e1e",
+    "theme_color": "#007acc",
+    "icons": [
+        // アイコン定義 (PWAとして必須)
+    ]
+}
