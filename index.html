@@ -3,22 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <title>DXCode - Pre-Upload Editor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
 </head>
 <body>
     <div id="editor-container">
         <div id="sidebar">
-            <button id="new-file-btn">+ New File</button>
-            <ul id="file-list"></ul> </div>
+            <h2>DXCode VFS</h2>
+            <button id="new-file-btn" title="新しいファイルを作成 (Ctrl+N)">+ File</button>
+            <button id="download-zip-btn" title="プロジェクトをZIPとしてダウンロード"><i class="fas fa-file-archive"></i> ZIP</button>
+            <ul id="file-list">
+                </ul>
+        </div>
         <div id="editor-wrapper">
-            <div id="tab-bar"></div>
+            <div id="tab-bar">
+                </div>
             <div id="monaco-editor"></div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
     <script src="main.js"></script>
 </body>
 </html>
