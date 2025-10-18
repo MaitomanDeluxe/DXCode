@@ -8,7 +8,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DXCode">
-    
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 
@@ -20,19 +19,52 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-    <div id="editor-container">
-        <div id="sidebar">
-            <h2>DXCode VFS</h2>
-            <button id="new-file-btn" title="新しいファイルを作成 (Ctrl+N)">+ File</button>
-            <button id="download-zip-btn" title="プロジェクトをZIPとしてダウンロード"><i class="fas fa-file-archive"></i> ZIP</button>
-            <button id="preview-btn" title="プレビューを表示 (HTMLファイル選択時のみ)" style="display: none;"><i class="fas fa-play"></i> Preview</button>
-            <ul id="file-list">
-                </ul>
+    <div id="app-container">
+        <div id="menu-bar">
+            <div class="menu-item">ファイル(F)</div>
+            <div class="menu-item">編集(E)</div>
+            <div class="menu-item">選択(S)</div>
+            <div class="menu-item">表示(V)</div>
+            <div class="menu-item">実行(R)</div>
+            <div class="menu-item">ヘルプ(H)</div>
         </div>
-        <div id="editor-wrapper">
-            <div id="tab-bar">
+
+        <div id="workspace">
+            <div id="activity-bar">
+                <div class="activity-icon active" data-view="explorer" title="エクスプローラー"><i class="fas fa-file"></i></div>
+                <div class="activity-icon" data-view="search" title="検索"><i class="fas fa-search"></i></div>
+                <div class="activity-icon" data-view="source-control" title="ソース管理"><i class="fas fa-code-branch"></i></div>
+                <div class="activity-icon" data-view="run" title="実行とデバッグ"><i class="fas fa-play-circle"></i></div>
+                <div class="activity-icon" data-view="extensions" title="拡張機能"><i class="fas fa-puzzle-piece"></i></div>
                 </div>
-            <div id="monaco-editor"></div>
+
+            <div id="sidebar-container">
+                <div id="sidebar-header">エクスプローラー</div>
+                
+                <div class="explorer-section">
+                    <div id="action-buttons">
+                        <button id="new-file-btn" title="新しいファイルを作成 (Ctrl+N)">+ New File</button>
+                        <button id="download-zip-btn" title="プロジェクトをZIPとしてダウンロード"><i class="fas fa-file-archive"></i> ZIP Download</button>
+                        <button id="preview-btn" title="プレビューを表示 (HTMLファイル選択時のみ)"><i class="fas fa-play"></i> Run Preview</button>
+                    </div>
+
+                    <ul id="file-list">
+                        </ul>
+                </div>
+            </div>
+
+            <div id="editor-area">
+                <div id="tab-bar">
+                    </div>
+                <div id="monaco-editor"></div>
+            </div>
+        </div>
+
+        <div id="status-bar">
+            <div class="status-item"><i class="fas fa-code-branch"></i> main*</div>
+            <div class="status-item"><i class="fas fa-sync-alt"></i> 同期</div>
+            <div style="flex-grow: 1;"></div> <div id="status-file-info" class="status-item">UTF-8 CRLF HTML</div>
+            <div class="status-item"><i class="fas fa-bell"></i></div>
         </div>
     </div>
     
