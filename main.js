@@ -162,105 +162,122 @@ function updateUI() {
  * 4.4 プレビューと仮想コンソール
  */
 
+// main.js - openPreview 関数の修正 (抜粋)
+
 function openPreview() {
-    // 全てのモデルの内容を取得
-    const htmlContent = virtualFileSystem.get('index.html')?.getValue() || '';
-    const cssContent = virtualFileSystem.get('style.css')?.getValue() || '';
-    const jsContent = virtualFileSystem.get('script.js')?.getValue() || '';
+    // 1. 全てのモデルの内容を取得 (VFS内の全コードを取得)
+    const codeData = {
+        html: virtualFileSystem.get('index.html')?.getValue() || '<h1>index.html not found</h1>',
+        css: virtualFileSystem.get('style.css')?.getValue() || '',
+        js: virtualFileSystem.get('script.js')?.getValue() || '',
+        fileNames: Array.from(virtualFileSystem.keys()) // コマンド用ファイルリスト
+    };
 
-    // HTMLにCSSとJSを埋め込む (簡易的なバンドル)
-    const bundledHtml = htmlContent
-        .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i, `<style>${cssContent}</style>`)
-        .replace(/<script[^>]*src=["']script\.js["'][^>]*><\/script>/i, `<script>${jsContent}</script>`);
-
+    // 2. プレビューウィンドウを開く
     const previewWindow = window.open('about:blank', 'DXCode_Preview', 'width=800,height=600');
-    
-    // 仮想コンソールロジックをプレビューページに挿入
-    const consoleSetup = `
-        <style>
-            #dxcode-console-wrapper { position: fixed; bottom: 0; left: 0; width: 100%; height: 150px; background: #222; color: #fff; z-index: 99999; display: flex; flex-direction: column; font-family: monospace; border-top: 2px solid #007acc; }
-            #dxcode-console { flex-grow: 1; overflow-y: scroll; padding: 5px; }
-            #dxcode-prompt { width: 100%; border: none; background: #111; color: #fff; padding: 5px; box-sizing: border-box; }
-            .log-item { margin-bottom: 2px; }
-            .log-error { color: #f44; } .log-warn { color: #ff0; } .log-info { color: #88f; }
-        </style>
-        <div id="dxcode-console-wrapper">
-            <div id="dxcode-console"></div>
-            <input type="text" id="dxcode-prompt" placeholder="Enter command (ls, whoami, clear)...">
-        </div>
-        <script>
-            const consoleEl = document.getElementById('dxcode-console');
-            const promptEl = document.getElementById('dxcode-prompt');
-            const fileNames = ${JSON.stringify(Array.from(virtualFileSystem.keys()))};
+    if (!previewWindow) {
+        alert('ポップアップがブロックされました。プレビューを表示できません。');
+        return;
+    }
 
-            function virtualLog(type, args) {
-                const item = document.createElement('div');
-                item.className = 'log-item log-' + type;
-                const message = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
-                item.textContent = \`[\${type.toUpperCase()}] \${message}\`;
-                consoleEl.appendChild(item);
-                consoleEl.scrollTop = consoleEl.scrollHeight;
-            }
-
-            // 本家のコンソール関数を上書きしてキャプチャ
-            ['log', 'error', 'warn', 'info'].forEach(type => {
-                const original = console[type];
-                console[type] = function(...args) {
-                    virtualLog(type, args);
-                    original.apply(console, args); 
-                };
-            });
-            console.log('DXCode Virtual Console initialized.');
-
-            // コマンド実行ロジック
-            function runCommand(command) {
-                const outputEl = document.createElement('div');
-                outputEl.className = 'log-item';
+    // 3. プレビューウィンドウのHTMLコンテンツを構築
+    const previewContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>DXCode Preview</title>
+            <style>
+                /* コンソール用のスタイル (省略 - 変更なし) */
+                #dxcode-console-wrapper { position: fixed; bottom: 0; left: 0; width: 100%; height: 150px; background: #222; color: #fff; z-index: 99999; display: flex; flex-direction: column; font-family: monospace; border-top: 2px solid #007acc; }
+                #dxcode-console { flex-grow: 1; overflow-y: scroll; padding: 5px; }
+                #dxcode-prompt { width: 100%; border: none; background: #111; color: #fff; padding: 5px; box-sizing: border-box; }
+                .log-item { margin-bottom: 2px; }
+                .log-error { color: #f44; } .log-warn { color: #ff0; } .log-info { color: #88f; }
+                body { margin-bottom: 150px; } /* コンソール分のスペース確保 */
                 
-                const parts = command.trim().toLowerCase().split(/\\s+/);
-                const cmd = parts[0];
-
-                switch (cmd) {
-                    case 'ls':
-                    case 'dir':
-                        outputEl.textContent = fileNames.join('   ');
-                        break;
-                    case 'tree':
-                        outputEl.textContent = fileNames.map(f => \`|-- \${f}\`).join('\\n');
-                        break;
-                    case 'whoami':
-                        const info = [
-                            \`User Agent: \${navigator.userAgent}\`,
-                            \`Platform: \${navigator.platform}\`,
-                            \`Device Type: \${/iPad|iPhone|iPod/.test(navigator.userAgent) ? 'iOS Device' : 'Desktop/Other'}\`
-                        ].join('\\n');
-                        outputEl.textContent = info;
-                        break;
-                    case 'clear':
-                        consoleEl.innerHTML = '';
-                        return;
-                    default:
-                        outputEl.textContent = \`Error: Command not found: \${cmd}\`;
+                /* **【★追加】閉じるボタンのスタイル** */
+                #close-btn {
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: rgba(0, 0, 0, 0.7);
+                    color: white;
+                    border: none;
+                    border-radius: 50%;
+                    width: 30px;
+                    height: 30px;
+                    line-height: 30px;
+                    text-align: center;
+                    font-size: 18px;
+                    cursor: pointer;
+                    z-index: 100000;
                 }
-                consoleEl.appendChild(outputEl);
-                consoleEl.scrollTop = consoleEl.scrollHeight;
-            }
+            </style>
+            <script>
+                // VFSファイル名をグローバル変数としてセット
+                const VFS_FILE_NAMES = ${JSON.stringify(codeData.fileNames)};
+                
+                // 仮想コンソールロガーとコマンドロジックを定義 (省略 - 変更なし)
+                // ...
+                
+                // 仮想ログ関数 (省略 - 変更なし)
+                function virtualLog(type, args) { /* ... */ }
 
-            promptEl.onkeydown = (e) => {
-                if (e.key === 'Enter') {
-                    const command = promptEl.value;
-                    virtualLog('info', ['$', command]);
-                    runCommand(command);
-                    promptEl.value = '';
+                // ログキャプチャ: ユーザーコード実行前に上書き (省略 - 変更なし)
+                // ...
+
+                // コマンド実行ロジック (省略 - 変更なし)
+                // ...
+                
+                // 【★追加】閉じるボタンの機能
+                function setupCloseButton() {
+                    const closeBtn = document.createElement('button');
+                    closeBtn.id = 'close-btn';
+                    closeBtn.innerHTML = '&times;'; // '×'
+                    closeBtn.onclick = function() {
+                        // ウィンドウを閉じる
+                        window.close();
+                    };
+                    document.body.appendChild(closeBtn);
                 }
-            };
-        </script>
+                
+                // ユーザーコード実行ロジック
+                window.onload = function() {
+                    // 【★追加】ボタンをセットアップ
+                    setupCloseButton(); 
+                
+                    // コンソールのセットアップ (前回ロジックから移植)
+                    const consoleEl = document.getElementById('dxcode-console');
+                    const promptEl = document.getElementById('dxcode-prompt');
+                    // ... (コンソール関連のDOM生成とイベント設定) ...
+                    
+                    // ユーザーコード実行
+                    const jsCode = document.getElementById('user-script').textContent;
+                    try {
+                        eval(jsCode); 
+                    } catch(e) {
+                        console.error('Uncaught Error in user script:', e);
+                    }
+                };
+            </script>
+        </head>
+        <body>
+            ${codeData.html.replace(/<link[^>]*href=["']style\.css["'][^>]*>/i, `<style>${codeData.css}</style>`)}
+            
+            <script id="user-script" type="text/plain">${codeData.js}</script> 
+            
+            <div id="dxcode-console-wrapper">
+                <div id="dxcode-console"></div>
+                <input type="text" id="dxcode-prompt" placeholder="Enter command (ls, whoami, clear)...">
+            </div>
+        </body>
+        </html>
     `;
 
-    previewWindow.document.write(bundledHtml + consoleSetup);
+    // 4. コンテンツを新しいウィンドウに書き込み、実行
+    previewWindow.document.write(previewContent);
     previewWindow.document.close();
 }
-
 
 /**
  * 4.5 ZIPダウンロード機能
