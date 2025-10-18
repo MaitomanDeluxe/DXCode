@@ -2,7 +2,4 @@
 <p>
   
 </p>
-##Install
-'''sh
-npm install
-'''
+## InstallMe!
