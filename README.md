@@ -1,5 +1,10 @@
-<h1 align="center"> DXCode version 1.0.0</h1>
-<p>
-  
-</p>
-## InstallMe!
+# <h1 align="center"> Welcome to DXCode! version 1.0.0</h1>
+
+
+HTMLベースで使いやすいデザインのコードエディタです。
+インストールは不要！ブラウザで開くだけ。
+
+#アプリ化の手順
+
+共有からホーム画面に追加を押すとアプリがデバイスに追加されます。
+通知権限は使用しません。安全です。
