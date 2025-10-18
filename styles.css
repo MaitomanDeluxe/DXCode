@@ -4,6 +4,7 @@
     --sidebar-bg: #333333;       /* サイドバー背景 */
     --text-color: #cccccc;       /* テキスト色 */
     --accent-color: #007acc;     /* アクセント色 (青) */
+    --preview-color: #4CAF50;    /* プレビューボタン (緑) */
     --border-color: #444444;
 }
 
@@ -40,16 +41,19 @@ html, body, #editor-container {
     margin-bottom: 10px;
 }
 
-#new-file-btn, #download-zip-btn {
+#new-file-btn, #download-zip-btn, #preview-btn {
     padding: 8px;
     margin-bottom: 5px;
-    background-color: var(--accent-color);
     color: white;
     border: none;
     cursor: pointer;
     border-radius: 3px;
     font-size: 1em;
 }
+
+#new-file-btn { background-color: var(--accent-color); }
+#download-zip-btn { background-color: #555; }
+#preview-btn { background-color: var(--preview-color); }
 
 #file-list {
     list-style: none;
@@ -59,7 +63,7 @@ html, body, #editor-container {
 }
 
 #file-list li {
-    padding: 5px 0;
+    padding: 5px 10px;
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
