@@ -29,7 +29,6 @@ html, body, #app-container {
     background-color: var(--bg-main);
 }
 
-/* メインコンテナ: メニューバー + ワークスペース */
 #app-container {
     display: flex;
     flex-direction: column;
@@ -46,18 +45,69 @@ html, body, #app-container {
     font-size: 13px;
     border-bottom: 1px solid #000;
     z-index: 10;
+    position: relative;
 }
 
 .menu-item {
+    position: relative;
     padding: 5px 8px;
     cursor: pointer;
     user-select: none;
+    z-index: 10;
 }
-.menu-item:hover {
+.menu-item:hover, .menu-item.active { 
     background-color: rgba(90, 93, 94, 0.31);
 }
 
-/* --- ワークスペース: アクティビティバー + サイドバー + エディタ + ステータスバー --- */
+/* --- ドロップダウンメニューパネル --- */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 250px;
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    border: 1px solid #000;
+    padding: 5px 0;
+    z-index: 20;
+    display: none;
+}
+.dropdown-menu.visible {
+    display: block;
+}
+
+.menu-option {
+    padding: 5px 15px 5px 30px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    height: 28px;
+}
+.menu-option:hover {
+    background-color: var(--active-item-bg);
+}
+
+.menu-option span:first-child i {
+    margin-right: 8px;
+    width: 15px; /* アイコンの幅を統一 */
+}
+
+.menu-shortcut {
+    color: var(--text-inactive);
+    font-size: 12px;
+}
+
+.menu-separator {
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 5px 0;
+}
+
+
+/* --- ワークスペース --- */
 #workspace {
     display: flex;
     flex-grow: 1;
@@ -89,7 +139,7 @@ html, body, #app-container {
     opacity: 1;
 }
 .activity-icon.active {
-    border-left: 2px solid white; /* アクティブな縦線 */
+    border-left: 2px solid white;
     margin-left: -2px;
     color: white;
 }
@@ -116,16 +166,19 @@ html, body, #app-container {
 
 .explorer-section {
     padding: 5px 0;
+    flex-grow: 1;
+    overflow-y: auto;
 }
 
-/* エクスプローラーのファイルリスト */
+/* ファイルリスト */
 #file-list {
     list-style: none;
     font-size: 13px;
+    padding-bottom: 5px;
 }
 
 #file-list li {
-    padding: 2px 15px; /* VS Code風に左側に余白 */
+    padding: 2px 15px;
     cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
@@ -139,6 +192,28 @@ html, body, #app-container {
 
 #file-list li.active {
     background-color: var(--active-item-bg);
+}
+
+/* サイドバー内のボタン */
+#new-file-btn, #download-zip-btn, #preview-btn {
+    padding: 6px 8px;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-right: 5px;
+}
+#new-file-btn { background-color: var(--accent-color); }
+#download-zip-btn { background-color: #555; }
+#preview-btn { background-color: #4CAF50; }
+
+#action-buttons {
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 /* --- エディタエリア --- */
@@ -156,6 +231,7 @@ html, body, #app-container {
     border-bottom: 1px solid var(--border-color);
     display: flex;
     overflow-x: auto;
+    flex-shrink: 0;
 }
 
 .tab {
@@ -169,7 +245,7 @@ html, body, #app-container {
 }
 
 .tab.active {
-    background-color: var(--bg-editor); /* アクティブタブはエディタ背景色 */
+    background-color: var(--bg-editor);
     color: var(--text-color);
 }
 
@@ -187,6 +263,7 @@ html, body, #app-container {
     padding: 0 5px;
     font-size: 12px;
     z-index: 10;
+    flex-shrink: 0;
 }
 
 .status-item {
@@ -195,14 +272,4 @@ html, body, #app-container {
 }
 .status-item:hover {
     background-color: rgba(255, 255, 255, 0.15);
-}
-
-/* プレビューボタンなどの修正 */
-#new-file-btn, #download-zip-btn, #preview-btn {
-    width: 100%;
-    margin-bottom: 0; /* サイドバー内では余白をCSSで調整 */
-}
-#action-buttons {
-    padding: 8px 10px 10px;
-    border-bottom: 1px solid var(--border-color);
 }
