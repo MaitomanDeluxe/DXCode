@@ -1,6 +1,6 @@
 /**
  * DXCode v1.0 - Full JavaScript Logic
- * Features: Monaco Editor, VFS, IndexedDB Persistence (Cmd+S), VSCode UI Integration, Preview with Virtual Console.
+ * Features: Monaco Editor, VFS, IndexedDB Persistence (Cmd+S), VSCode UI Integration, Menu Bar Actions, Preview with Virtual Console.
  */
 
 // -----------------------------------------------------
@@ -16,7 +16,7 @@ if ('serviceWorker' in navigator) {
 }
 
 let monacoEditor = null;
-const virtualFileSystem = new Map(); // key: ファイル名, value: Monaco Model
+const virtualFileSystem = new Map();
 let activeFile = null;
 
 const DB_NAME = 'DXCodeDB';
@@ -69,7 +69,6 @@ async function loadProject() {
                 request.result.forEach(item => {
                     createFile(item.fileName, item.content, false); 
                 });
-                // ロード後に最初のファイルをアクティブにする
                 setActiveFile(virtualFileSystem.keys().next().value);
             } else {
                 createInitialFiles();
@@ -81,8 +80,7 @@ async function loadProject() {
 }
 
 function createInitialFiles() {
-    // 初期ファイルを自動でアクティブ化
-    createFile('index.html', `<!DOCTYPE html>\n<html>\n<head>\n  <title>DXCode Test</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hello DXCode</h1>\n  <p>Press Cmd/Ctrl + S to save the project!</p>\n  <script src="script.js"></script>\n</body>\n</html>`, true);
+    createFile('index.html', `<!DOCTYPE html>\n<html>\n<head>\n  <title>DXCode Test</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hello DXCode</h1>\n  <p>Press Cmd/Ctrl + S or use the File menu to save the project!</p>\n  <script src="script.js"></script>\n</body>\n</html>`, true);
     createFile('style.css', 'body {\n  background-color: #2e2e2e;\n  color: #cccccc;\n}');
     createFile('script.js', 'console.log("DXCode is ready!");');
 }
@@ -105,7 +103,7 @@ function getLanguage(fileName) {
 
 function createFile(fileName, content = '', activate = true) {
     if (virtualFileSystem.has(fileName)) {
-        console.warn(`${fileName} already exists.`);
+        alert(`${fileName} は既に存在します。`);
         return;
     }
 
@@ -113,7 +111,6 @@ function createFile(fileName, content = '', activate = true) {
     const model = monaco.editor.createModel(content, lang);
     virtualFileSystem.set(fileName, model);
     
-    // モデルに言語変更イベントリスナーをセット
     model.onDidChangeLanguage(() => updateUI());
 
     if (activate) setActiveFile(fileName);
@@ -127,10 +124,7 @@ function setActiveFile(fileName) {
     activeFile = fileName;
     const model = virtualFileSystem.get(fileName);
     
-    // Monaco Editorのモデルを切り替え
     monacoEditor.setModel(model);
-    
-    // 言語モードをMonacoに伝える (ファイル拡張子が変わる可能性を考慮)
     monaco.editor.setModelLanguage(model, getLanguage(fileName));
     
     updateUI();
@@ -147,10 +141,8 @@ function updateUI() {
 
     const activeFileExt = activeFile ? activeFile.split('.').pop() : '';
     
-    // プレビューボタンの表示制御
     previewBtn.style.display = (activeFileExt === 'html') ? 'block' : 'none';
 
-    // ステータスバーのファイル情報更新
     statusFileInfoEl.textContent = `${activeFileExt.toUpperCase()} | UTF-8 | CRLF`;
 
     virtualFileSystem.forEach((model, fileName) => {
@@ -170,6 +162,11 @@ function updateUI() {
         tab.onclick = () => setActiveFile(fileName);
         tabBarEl.appendChild(tab);
     });
+    
+    // エディタが空の場合にダミーモデルを設定
+    if (!activeFile && virtualFileSystem.size === 0) {
+        monacoEditor.setModel(null);
+    }
 }
 
 
@@ -182,7 +179,7 @@ function openPreview() {
         html: virtualFileSystem.get('index.html')?.getValue() || '<h1>index.html not found</h1>',
         css: virtualFileSystem.get('style.css')?.getValue() || '',
         js: virtualFileSystem.get('script.js')?.getValue() || '',
-        fileNames: Array.from(virtualFileSystem.keys()) // コマンド用ファイルリスト
+        fileNames: Array.from(virtualFileSystem.keys())
     };
 
     const previewWindow = window.open('about:blank', 'DXCode_Preview', 'width=800,height=600');
@@ -191,7 +188,6 @@ function openPreview() {
         return;
     }
 
-    // プレビューウィンドウのHTMLコンテンツを構築
     const previewContent = `
         <!DOCTYPE html>
         <html>
@@ -204,7 +200,7 @@ function openPreview() {
                 #dxcode-prompt { width: 100%; border: none; background: #111; color: #fff; padding: 5px; box-sizing: border-box; }
                 .log-item { margin-bottom: 2px; }
                 .log-error { color: #f44; } .log-warn { color: #ff0; } .log-info { color: #88f; }
-                body { margin-bottom: 150px; } /* コンソール分のスペース確保 */
+                body { margin-bottom: 150px; }
                 
                 /* 閉じるボタンのスタイル */
                 #close-btn {
@@ -225,7 +221,6 @@ function openPreview() {
                 }
             </style>
             <script>
-                // VFSファイル名をグローバル変数としてセット
                 const VFS_FILE_NAMES = ${JSON.stringify(codeData.fileNames)};
                 
                 // DOM要素
@@ -241,7 +236,6 @@ function openPreview() {
                 wrapper.appendChild(consoleEl);
                 wrapper.appendChild(promptEl);
                 
-                // 仮想ログ関数
                 function virtualLog(type, args) {
                     const item = document.createElement('div');
                     item.className = 'log-item log-' + type;
@@ -251,7 +245,7 @@ function openPreview() {
                     consoleEl.scrollTop = consoleEl.scrollHeight;
                 }
 
-                // ログキャプチャ: ユーザーコード実行前に上書き
+                // ログキャプチャ
                 window.originalConsole = window.console;
                 ['log', 'error', 'warn', 'info'].forEach(type => {
                     const original = window.originalConsole[type];
@@ -308,7 +302,7 @@ function openPreview() {
                 function setupCloseButton() {
                     const closeBtn = document.createElement('button');
                     closeBtn.id = 'close-btn';
-                    closeBtn.innerHTML = '&times;'; // '×'
+                    closeBtn.innerHTML = '&times;';
                     closeBtn.onclick = function() {
                         window.close();
                     };
@@ -317,13 +311,12 @@ function openPreview() {
                 
                 // ユーザーコード実行ロジック
                 window.onload = function() {
-                    document.body.appendChild(wrapper); // コンソールをbodyに追加
+                    document.body.appendChild(wrapper);
                     console.log('DXCode Virtual Console initialized.');
                     setupCloseButton(); 
                 
                     const jsCode = document.getElementById('user-script').textContent;
                     try {
-                        // ユーザーのJavaScriptを実行
                         eval(jsCode); 
                     } catch(e) {
                         console.error('Uncaught Error in user script:', e);
@@ -372,7 +365,126 @@ document.getElementById('download-zip-btn').addEventListener('click', () => {
 
 
 // -----------------------------------------------------
-// 6. Monaco Editorの初期化とUIイベント
+// 6. メニューバーとUIアクションの実装
+// -----------------------------------------------------
+
+/**
+ * ドロップダウンメニューの表示/非表示を切り替える
+ */
+function setupMenuBar() {
+    const menuItems = document.querySelectorAll('#menu-bar .menu-item');
+    
+    function hideAllMenus() {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => {
+            menu.classList.remove('visible');
+        });
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.classList.remove('active');
+        });
+    }
+
+    // メニューバーのイベントリスナー
+    menuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            const dropdown = item.querySelector('.dropdown-menu');
+            const isActive = dropdown.classList.contains('visible');
+
+            hideAllMenus();
+
+            if (!isActive) {
+                dropdown.classList.add('visible');
+                item.classList.add('active');
+            }
+        });
+    });
+
+    document.body.addEventListener('click', hideAllMenus);
+    
+    // アクションリスナーを設定
+    document.querySelectorAll('.dropdown-menu .menu-option').forEach(option => {
+        option.addEventListener('click', handleMenuAction);
+    });
+}
+
+/**
+ * メニューアクションの実行
+ */
+function handleMenuAction(e) {
+    e.stopPropagation();
+    hideAllMenus();
+    
+    const action = e.currentTarget.getAttribute('data-action');
+    const sidebarContainer = document.getElementById('sidebar-container');
+    const activityBar = document.getElementById('activity-bar');
+
+    switch (action) {
+        // ファイル(F)メニュー
+        case 'new-file':
+            document.getElementById('new-file-btn').click();
+            break;
+        case 'save':
+            saveProject();
+            break;
+        case 'download-zip':
+            document.getElementById('download-zip-btn').click();
+            break;
+        case 'close-file':
+            if (activeFile && virtualFileSystem.has(activeFile)) {
+                virtualFileSystem.get(activeFile).dispose(); // Monaco Modelを解放
+                virtualFileSystem.delete(activeFile);
+                activeFile = virtualFileSystem.keys().next().value || null;
+                if (activeFile) {
+                    setActiveFile(activeFile);
+                } else {
+                    monacoEditor.setModel(null);
+                }
+                updateUI();
+            }
+            break;
+            
+        // 編集(E)メニュー
+        case 'undo':
+            monacoEditor.trigger('menu-action', 'undo', {});
+            break;
+        case 'redo':
+            monacoEditor.trigger('menu-action', 'redo', {});
+            break;
+        case 'find':
+            monacoEditor.trigger('menu-action', 'actions.find', {});
+            break;
+            
+        // 表示(V)メニュー
+        case 'toggle-sidebar':
+            sidebarContainer.style.display = sidebarContainer.style.display === 'none' ? 'flex' : 'none';
+            break;
+        case 'toggle-activitybar':
+            activityBar.style.display = activityBar.style.display === 'none' ? 'flex' : 'none';
+            break;
+            
+        // 実行(R)メニュー
+        case 'open-preview':
+            if (activeFile && activeFile.endsWith('.html')) {
+                openPreview();
+            } else {
+                alert('プレビューを実行するには HTML ファイルを選択してください。');
+            }
+            break;
+
+        // ヘルプ(H)メニュー
+        case 'about':
+            alert('DXCode: Visual Studio Code風 PWA エディタ\n\nGitHub PagesとMonaco Editorを使用して構築されています。\n\n開発元: Gemini');
+            break;
+            
+        default:
+            alert(`「${e.currentTarget.textContent.trim()}」機能は未実装です。`);
+    }
+}
+
+
+// -----------------------------------------------------
+// 7. Monaco Editorの初期化とUIイベント
 // -----------------------------------------------------
 
 require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs' }});
@@ -384,10 +496,9 @@ require(['vs/editor/editor.main'], function() {
         minimap: { enabled: true },
     });
     
-    // IndexedDBからプロジェクトをロード
     loadProject();
 
-    // イベントリスナー設定
+    // ボタンのイベントリスナー
     document.getElementById('new-file-btn').addEventListener('click', () => {
         const fileName = prompt("新しいファイル名を入力してください (例: component.js):");
         if (fileName) {
@@ -397,21 +508,23 @@ require(['vs/editor/editor.main'], function() {
 
     document.getElementById('preview-btn').addEventListener('click', openPreview);
 
-    // キーボードショートカット (Cmd/Ctrl + S で保存)
+    // キーボードショートカット
     monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
         saveProject();
-        return null; // ブラウザのデフォルト保存をキャンセル
+        return null; 
     }, 'EditorTextFocus'); 
 
-    // キーボードショートカット (Cmd/Ctrl + N で新規ファイル)
     monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, () => {
         document.getElementById('new-file-btn').click();
     });
 
+    // メニューバーのセットアップ
+    setupMenuBar(); 
+
     // アクティビティバーのイベントリスナー設定
     const activityIcons = document.querySelectorAll('.activity-icon');
     const sidebarContainer = document.getElementById('sidebar-container');
-    let isSidebarVisible = true; // 初期状態は表示
+    let isSidebarVisible = true;
 
     activityIcons.forEach(icon => {
         icon.addEventListener('click', () => {
@@ -421,13 +534,11 @@ require(['vs/editor/editor.main'], function() {
             const view = icon.getAttribute('data-view');
             
             if (view === 'explorer') {
-                // エクスプローラーがクリックされたらトグルする
                 isSidebarVisible = !isSidebarVisible;
                 if (!isSidebarVisible) {
-                    icon.classList.remove('active'); // 非表示時はアイコンを非アクティブに
+                    icon.classList.remove('active');
                 }
             } else {
-                // その他のビューは表示し、アラート
                 isSidebarVisible = true;
                 alert(`「${icon.title}」機能は現在、エクスプローラー以外ダミーです。`);
             }
