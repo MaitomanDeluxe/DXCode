@@ -1,275 +1,70 @@
 :root {
-    /* VS Code Dark Default Color Palette */
-    --bg-main: #1e1e1e;          /* メイン背景 (エディタ以外) */
-    --bg-editor: #1e1e1e;        /* エディタ背景 */
-    --bg-secondary: #252526;     /* エディタタブ・サイドバー背景 */
-    --bg-activity: #333333;      /* アクティビティバー (左端) */
-    --bg-status: #007acc;        /* ステータスバー (下部 水色) */
-    --bg-menu: #3c3c3c;          /* メニューバー背景 */
-    
-    --text-color: #cccccc;       /* 標準テキスト色 */
-    --text-inactive: #808080;    /* 非アクティブなテキスト色 */
-    --accent-color: #007acc;     /* アクセント色 (青) */
-    --active-item-bg: #006080;   /* アクティブなアイテムの背景 */
-    --border-color: #333333;     /* 境界線 */
-
+    --bg-main: #1e1e1e;
+    --bg-editor: #1e1e1e;
+    --bg-secondary: #252526;
+    --bg-activity: #333333;
+    --bg-status: #007acc;
+    --bg-menu: #3c3c3c;
+    --text-color: #cccccc;
+    --text-inactive: #808080;
+    --accent-color: #007acc;
+    --active-item-bg: #006080;
+    --border-color: #333333;
     --font-ui: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: var(--font-ui);
-}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-ui); }
+html, body, #app-container { height: 100%; overflow: hidden; background-color: var(--bg-main); }
+#app-container { display: flex; flex-direction: column; }
 
-html, body, #app-container {
-    height: 100%;
-    overflow: hidden;
-    background-color: var(--bg-main);
-}
-
-#app-container {
-    display: flex;
-    flex-direction: column;
-}
-
-/* --- ツールバー (メニューバー) --- */
+/* メニューバー */
 #menu-bar {
-    height: 30px;
-    background-color: var(--bg-menu);
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    font-size: 13px;
-    border-bottom: 1px solid #000;
-    z-index: 10;
-    position: relative;
+    height: 30px; background-color: var(--bg-menu); color: var(--text-color);
+    display: flex; align-items: center; padding: 0 10px; font-size: 13px;
+    border-bottom: 1px solid #000; z-index: 10; position: relative;
 }
+.menu-item { position: relative; padding: 5px 8px; cursor: pointer; user-select: none; }
+.menu-item:hover, .menu-item.active { background-color: rgba(90, 93, 94, 0.31); }
 
-.menu-item {
-    position: relative;
-    padding: 5px 8px;
-    cursor: pointer;
-    user-select: none;
-    z-index: 10;
-}
-.menu-item:hover, .menu-item.active { 
-    background-color: rgba(90, 93, 94, 0.31);
-}
-
-/* --- ドロップダウンメニューパネル --- */
 .dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 250px;
-    background-color: var(--bg-secondary);
-    color: var(--text-color);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
-    border: 1px solid #000;
-    padding: 5px 0;
-    z-index: 20;
-    display: none;
+    position: absolute; top: 100%; left: 0; width: 250px; background-color: var(--bg-secondary);
+    color: var(--text-color); box-shadow: 0 4px 6px rgba(0,0,0,0.5); border: 1px solid #000;
+    padding: 5px 0; z-index: 20; display: none;
 }
-.dropdown-menu.visible {
-    display: block;
-}
+.dropdown-menu.visible { display: block; }
+.menu-option { padding: 5px 15px 5px 30px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 13px; height: 28px; }
+.menu-option:hover { background-color: var(--active-item-bg); }
+.menu-shortcut { color: var(--text-inactive); font-size: 12px; }
+.menu-separator { height: 1px; background-color: var(--border-color); margin: 5px 0; }
 
-.menu-option {
-    padding: 5px 15px 5px 30px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    height: 28px;
-}
-.menu-option:hover {
-    background-color: var(--active-item-bg);
-}
+/* ワークスペース */
+#workspace { display: flex; flex-grow: 1; overflow: hidden; }
 
-.menu-option span:first-child i {
-    margin-right: 8px;
-    width: 15px; /* アイコンの幅を統一 */
-}
+/* アクティビティバー */
+#activity-bar { width: 50px; background-color: var(--bg-activity); display: flex; flex-direction: column; align-items: center; padding-top: 5px; border-right: 1px solid #000; }
+.activity-icon { width: 50px; height: 48px; line-height: 48px; text-align: center; font-size: 20px; color: var(--text-color); cursor: pointer; opacity: 0.6; }
+.activity-icon.active { border-left: 2px solid white; opacity: 1; color: white; }
 
-.menu-shortcut {
-    color: var(--text-inactive);
-    font-size: 12px;
-}
-
-.menu-separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 5px 0;
-}
-
-
-/* --- ワークスペース --- */
-#workspace {
-    display: flex;
-    flex-grow: 1;
-    overflow: hidden;
-}
-
-/* --- アクティビティバー (左端アイコンバー) --- */
-#activity-bar {
-    width: 50px;
-    background-color: var(--bg-activity);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 5px;
-    border-right: 1px solid #000;
-}
-
-.activity-icon {
-    width: 50px;
-    height: 48px;
-    line-height: 48px;
-    text-align: center;
-    font-size: 20px;
-    color: var(--text-color);
-    cursor: pointer;
-    opacity: 0.6;
-}
-.activity-icon:hover, .activity-icon.active {
-    opacity: 1;
-}
-.activity-icon.active {
-    border-left: 2px solid white;
-    margin-left: -2px;
-    color: white;
-}
-
-
-/* --- サイドバー (エクスプローラー) --- */
-#sidebar-container {
-    width: 250px;
-    background-color: var(--bg-secondary);
-    color: var(--text-color);
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    font-size: 13px;
-}
-
-#sidebar-header {
-    padding: 8px 10px;
-    text-transform: uppercase;
-    font-weight: bold;
-    color: var(--text-inactive);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.explorer-section {
-    padding: 5px 0;
-    flex-grow: 1;
-    overflow-y: auto;
-}
-
-/* ファイルリスト */
-#file-list {
-    list-style: none;
-    font-size: 13px;
-    padding-bottom: 5px;
-}
-
-#file-list li {
-    padding: 2px 15px;
-    cursor: pointer;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 22px;
-}
-
-#file-list li:hover {
-    background-color: #2a2d2e;
-}
-
-#file-list li.active {
-    background-color: var(--active-item-bg);
-}
-
-/* サイドバー内のボタン */
-#new-file-btn, #download-zip-btn, #preview-btn {
-    padding: 6px 8px;
-    color: white;
-    border: none;
-    cursor: pointer;
-    border-radius: 3px;
-    font-size: 12px;
-    margin-right: 5px;
-}
+/* サイドバー */
+#sidebar-container { width: 250px; background-color: var(--bg-secondary); color: var(--text-color); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; font-size: 13px; }
+#sidebar-header { padding: 8px 10px; text-transform: uppercase; font-weight: bold; color: var(--text-inactive); border-bottom: 1px solid var(--border-color); }
+.explorer-section { padding: 5px 0; flex-grow: 1; overflow-y: auto; }
+#file-list { list-style: none; }
+#file-list li { padding: 2px 15px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#file-list li.active { background-color: var(--active-item-bg); }
+#action-buttons { padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 5px; border-bottom: 1px solid var(--border-color); }
+button { padding: 6px 8px; color: white; border: none; cursor: pointer; border-radius: 3px; font-size: 12px; }
 #new-file-btn { background-color: var(--accent-color); }
 #download-zip-btn { background-color: #555; }
 #preview-btn { background-color: #4CAF50; }
 
-#action-buttons {
-    padding: 8px 10px 10px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
+/* エディタエリア */
+#editor-area { flex-grow: 1; display: flex; flex-direction: column; background-color: var(--bg-editor); overflow: hidden; }
+#tab-bar { height: 35px; background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color); display: flex; overflow-x: auto; }
+.tab { padding: 8px 15px; border-right: 1px solid #000; color: var(--text-inactive); cursor: pointer; font-size: 13px; white-space: nowrap; }
+.tab.active { background-color: var(--bg-editor); color: var(--text-color); }
+#monaco-editor { flex-grow: 1; }
 
-/* --- エディタエリア --- */
-#editor-area {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--bg-editor);
-    overflow: hidden;
-}
-
-#tab-bar {
-    height: 35px;
-    background-color: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    overflow-x: auto;
-    flex-shrink: 0;
-}
-
-.tab {
-    padding: 8px 15px;
-    border-right: 1px solid #000;
-    color: var(--text-inactive);
-    cursor: pointer;
-    background-color: var(--bg-secondary);
-    white-space: nowrap;
-    font-size: 13px;
-}
-
-.tab.active {
-    background-color: var(--bg-editor);
-    color: var(--text-color);
-}
-
-#monaco-editor {
-    flex-grow: 1;
-}
-
-/* --- ステータスバー (下部の水色バー) --- */
-#status-bar {
-    height: 22px;
-    background-color: var(--bg-status);
-    color: white;
-    display: flex;
-    align-items: center;
-    padding: 0 5px;
-    font-size: 12px;
-    z-index: 10;
-    flex-shrink: 0;
-}
-
-.status-item {
-    padding: 0 6px;
-    cursor: pointer;
-}
-.status-item:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-}
+/* ステータスバー */
+#status-bar { height: 22px; background-color: var(--bg-status); color: white; display: flex; align-items: center; padding: 0 5px; font-size: 12px; }
+.status-item { padding: 0 6px; cursor: pointer; }
