@@ -22,7 +22,6 @@
 <body>
     <div id="app-container">
         <div id="menu-bar">
-            
             <div class="menu-item" data-menu="file">ファイル(F)
                 <div class="dropdown-menu" id="menu-file">
                     <div class="menu-option" data-action="new-file">
@@ -101,22 +100,18 @@
 
             <div id="sidebar-container">
                 <div id="sidebar-header">エクスプローラー</div>
-                
                 <div class="explorer-section">
                     <div id="action-buttons">
                         <button id="new-file-btn" title="新しいファイルを作成 (Ctrl+N)">+ New File</button>
                         <button id="download-zip-btn" title="プロジェクトをZIPとしてダウンロード"><i class="fas fa-file-archive"></i> ZIP Download</button>
-                        <button id="preview-btn" title="プレビューを表示 (HTMLファイル選択時のみ)" style="display: none;"><i class="fas fa-play"></i> Run Preview</button>
+                        <button id="preview-btn" title="プレビューを表示" style="display: none;"><i class="fas fa-play"></i> Run Preview</button>
                     </div>
-
-                    <ul id="file-list">
-                        </ul>
+                    <ul id="file-list"></ul>
                 </div>
             </div>
 
             <div id="editor-area">
-                <div id="tab-bar">
-                    </div>
+                <div id="tab-bar"></div>
                 <div id="monaco-editor"></div>
             </div>
         </div>
@@ -124,7 +119,8 @@
         <div id="status-bar">
             <div class="status-item"><i class="fas fa-code-branch"></i> main*</div>
             <div class="status-item"><i class="fas fa-sync-alt"></i> 同期</div>
-            <div style="flex-grow: 1;"></div> <div id="status-file-info" class="status-item">UTF-8 CRLF HTML</div>
+            <div style="flex-grow: 1;"></div> 
+            <div id="status-file-info" class="status-item">UTF-8 CRLF HTML</div>
             <div class="status-item"><i class="fas fa-bell"></i></div>
         </div>
     </div>
