@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>DXCode - VSCode-like Editor</title>
+    <title>DXCode - VSCode-like Editor (Standalone)</title>
     
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -129,6 +129,493 @@
         </div>
     </div>
     
-    <script src="main.js"></script>
+    <!-- Inlined main.js (standalone) -->
+    <script>
+    /**
+     * Inlined main.js (simplified, stable version)
+     * - Avoids nested inline <script> in preview to be safe for standalone embedding.
+     * - Restores initial test files and core functionality (Monaco, VFS, IndexedDB, search, zip, menu).
+     */
+
+    // Service Worker registration (kept)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(registration => console.log('SW registered:', registration.scope))
+                .catch(error => console.error('SW registration failed:', error));
+        });
+    }
+
+    let monacoEditor = null;
+    const virtualFileSystem = new Map();
+    let activeFile = null;
+
+    const DB_NAME = 'DXCodeDB';
+    const STORE_NAME = 'VFS';
+
+    function hideAllMenus() {
+        document.querySelectorAll('.dropdown-menu').forEach(menu => menu.classList.remove('visible'));
+        document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+    }
+
+    // IndexedDB helpers
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = (e) => {
+                e.target.result.createObjectStore(STORE_NAME, { keyPath: 'fileName' });
+            };
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async function saveProject() {
+        try {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+
+            store.clear();
+
+            virtualFileSystem.forEach((model, fileName) => {
+                const content = model.getValue();
+                store.put({ fileName: fileName, content: content });
+            });
+
+            await new Promise(resolve => tx.oncomplete = resolve);
+            console.log('Project saved to IndexedDB (Cmd+S).');
+            alert('保存しました (IndexedDB).');
+        } catch (e) {
+            console.error('Save failed:', e);
+            alert('保存に失敗しました。コンソールを確認してください。');
+        }
+    }
+
+    async function loadProject() {
+        try {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                if (request.result.length > 0) {
+                    request.result.forEach(item => {
+                        createFile(item.fileName, item.content, false); 
+                    });
+                    setActiveFile(virtualFileSystem.keys().next().value);
+                } else {
+                    createInitialFiles();
+                }
+            };
+            request.onerror = () => {
+                createInitialFiles();
+            };
+        } catch (e) {
+            createInitialFiles();
+        }
+    }
+
+    function createInitialFiles() {
+        createFile('index.html', '<!DOCTYPE html>\\n<html>\\n<head>\\n  <title>DXCode Test</title>\\n  <link rel=\"stylesheet\" href=\"style.css\">\\n</head>\\n<body>\\n  <h1>Hello DXCode</h1>\\n  <p>Press Cmd/Ctrl + S to save, Ctrl+N to create a new file.</p>\\n</body>\\n</html>\\n', true);
+        createFile('style.css', 'body {\\n  background-color: #2e2e2e;\\n  color: #cccccc;\\n}', false);
+        createFile('script.js', 'console.log(\"DXCode is ready!\");', false);
+    }
+
+    function getLanguage(fileName) {
+        const ext = fileName.split('.').pop();
+        switch (ext) {
+            case 'html': return 'html';
+            case 'css': return 'css';
+            case 'js': return 'javascript';
+            case 'json': return 'json';
+            default: return 'plaintext';
+        }
+    }
+
+    function createFile(fileName, content = '', activate = true) {
+        if (virtualFileSystem.has(fileName)) {
+            alert(`${fileName} は既に存在します。`);
+            return;
+        }
+
+        const lang = getLanguage(fileName);
+        const model = monaco.editor.createModel(content, lang);
+        virtualFileSystem.set(fileName, model);
+
+        if (activate) setActiveFile(fileName);
+        updateUI();
+    }
+
+    function setActiveFile(fileName) {
+        if (!virtualFileSystem.has(fileName) || fileName === activeFile) return;
+
+        activeFile = fileName;
+        const model = virtualFileSystem.get(fileName);
+
+        monacoEditor.setModel(model);
+        monaco.editor.setModelLanguage(model, getLanguage(fileName));
+
+        updateUI();
+    }
+
+    function updateUI() {
+        const fileListEl = document.getElementById('file-list');
+        const tabBarEl = document.getElementById('tab-bar');
+        const previewBtn = document.getElementById('preview-btn');
+        const statusFileInfoEl = document.getElementById('status-file-info');
+
+        fileListEl.innerHTML = '';
+        tabBarEl.innerHTML = '';
+
+        const activeFileExt = activeFile ? activeFile.split('.').pop() : '';
+
+        previewBtn.style.display = (activeFileExt === 'html') ? 'block' : 'none';
+        statusFileInfoEl.textContent = `${activeFileExt.toUpperCase()} | UTF-8 | CRLF`;
+
+        virtualFileSystem.forEach((model, fileName) => {
+            const isActive = fileName === activeFile;
+
+            const li = document.createElement('li');
+            li.textContent = fileName;
+            li.className = isActive ? 'active' : '';
+            li.onclick = () => setActiveFile(fileName);
+            fileListEl.appendChild(li);
+
+            const tab = document.createElement('div');
+            tab.textContent = fileName;
+            tab.className = 'tab ' + (isActive ? 'active' : '');
+            tab.onclick = () => setActiveFile(fileName);
+            tabBarEl.appendChild(tab);
+        });
+
+        if (!activeFile && virtualFileSystem.size === 0) {
+            monacoEditor.setModel(null);
+        }
+    }
+
+    // Simple preview via blob URL to avoid nested inline scripts in generated HTML
+    function openPreview() {
+        const html = virtualFileSystem.get('index.html')?.getValue() || '<h1>index.html not found</h1>';
+        const css = virtualFileSystem.get('style.css')?.getValue() || '';
+        const js = virtualFileSystem.get('script.js')?.getValue() || '';
+        const combined = html.replace(/<link[^>]*href=["']style\\.css["'][^>]*>/i, `<style>${css}</style>`) +
+            '<script>' + js + '<\/script>';
+
+        const blob = new Blob([combined], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const w = window.open(url, '_blank');
+        if (!w) alert('ポップアップがブロックされました。');
+    }
+
+    // ZIP download
+    document.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'download-zip-btn') {
+            if (virtualFileSystem.size === 0) {
+                alert('プロジェクトが空です。');
+                return;
+            }
+
+            const zip = new JSZip();
+            virtualFileSystem.forEach((model, fileName) => {
+                const content = model.getValue();
+                zip.file(fileName, content);
+            });
+
+            zip.generateAsync({ type: "blob" })
+                .then(content => {
+                    saveAs(content, "DXCode_Project.zip");
+                })
+                .catch(err => {
+                    console.error("ZIP生成エラー:", err);
+                    alert("ZIPファイルの生成に失敗しました。");
+                });
+        }
+    });
+
+    // Menu bar
+    function setupMenuBar() {
+        const menuItems = document.querySelectorAll('#menu-bar .menu-item');
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const dropdown = item.querySelector('.dropdown-menu');
+                const isActive = dropdown.classList.contains('visible');
+                hideAllMenus();
+                if (!isActive) {
+                    dropdown.classList.add('visible');
+                    item.classList.add('active');
+                }
+            });
+        });
+        document.body.addEventListener('click', hideAllMenus);
+        document.querySelectorAll('.dropdown-menu .menu-option').forEach(option => {
+            option.addEventListener('click', handleMenuAction);
+        });
+    }
+
+    function handleMenuAction(e) {
+        e.stopPropagation();
+        hideAllMenus();
+
+        const action = e.currentTarget.getAttribute('data-action');
+        const sidebarContainer = document.getElementById('sidebar-container');
+        const activityBar = document.getElementById('activity-bar');
+
+        switch (action) {
+            case 'new-file':
+                document.getElementById('new-file-btn').click();
+                break;
+            case 'save':
+                saveProject();
+                break;
+            case 'download-zip':
+                document.getElementById('download-zip-btn').click();
+                break;
+            case 'close-file':
+                if (activeFile && virtualFileSystem.has(activeFile)) {
+                    virtualFileSystem.get(activeFile).dispose();
+                    virtualFileSystem.delete(activeFile);
+                    activeFile = virtualFileSystem.keys().next().value || null;
+                    if (activeFile) setActiveFile(activeFile);
+                    else monacoEditor.setModel(null);
+                    updateUI();
+                }
+                break;
+            case 'undo':
+                monacoEditor.trigger('menu-action', 'undo', {});
+                break;
+            case 'redo':
+                monacoEditor.trigger('menu-action', 'redo', {});
+                break;
+            case 'find':
+                monacoEditor.trigger('menu-action', 'actions.find', {});
+                break;
+            case 'toggle-sidebar':
+                sidebarContainer.style.display = sidebarContainer.style.display === 'none' ? 'flex' : 'none';
+                break;
+            case 'toggle-activitybar':
+                activityBar.style.display = activityBar.style.display === 'none' ? 'flex' : 'none';
+                break;
+            case 'open-preview':
+                if (activeFile && activeFile.endsWith('.html')) openPreview();
+                else alert('プレビューを実行するには HTML ファイルを選択してください。');
+                break;
+            case 'about':
+                alert('DXCode: Visual Studio Code風 PWA エディタ\\n\\nGitHub PagesとMonaco Editorを使用して構築されています。');
+                break;
+            default:
+                alert('未実装の機能です。');
+        }
+    }
+
+    // Search (simple, case-insensitive)
+    let searchDecorations = [];
+    function performSearch(query) {
+        const trimmed = (query || '').trim();
+        const resultsEl = document.getElementById('search-results');
+        if (!resultsEl) return;
+        searchDecorations = monacoEditor ? monacoEditor.deltaDecorations(searchDecorations, []) : [];
+
+        if (!trimmed) {
+            resultsEl.innerHTML = '<div style="padding:8px;color:var(--text-inactive)">検索語を入力してください。</div>';
+            return;
+        }
+
+        const qLower = trimmed.toLowerCase();
+        const hits = [];
+
+        virtualFileSystem.forEach((model, fileName) => {
+            const content = model.getValue();
+            if (fileName.toLowerCase().includes(qLower)) {
+                hits.push({ fileName, line: null, text: '(ファイル名にヒット)', start: 0, length: 0 });
+            }
+            const lines = content.split(/\\r?\\n/);
+            for (let i = 0; i < lines.length; i++) {
+                const idx = lines[i].toLowerCase().indexOf(qLower);
+                if (idx !== -1) hits.push({ fileName, line: i, text: lines[i], start: idx, length: trimmed.length });
+            }
+        });
+
+        renderSearchResults(hits);
+    }
+
+    function renderSearchResults(hits) {
+        const resultsEl = document.getElementById('search-results');
+        if (!resultsEl) return;
+        resultsEl.innerHTML = '';
+        if (!hits || hits.length === 0) {
+            resultsEl.innerHTML = '<div style="padding:8px;color:var(--text-inactive)">該当する結果はありません。</div>';
+            return;
+        }
+        hits.forEach(hit => {
+            const item = document.createElement('div');
+            item.className = 'dx-search-result';
+            item.style.padding = '8px';
+            item.style.borderBottom = '1px solid rgba(255,255,255,0.03)';
+
+            const fileEl = document.createElement('div');
+            fileEl.className = 'dx-search-file';
+            fileEl.textContent = hit.fileName + (hit.line !== null ? ` : ${hit.line + 1}` : '');
+            item.appendChild(fileEl);
+
+            if (hit.line !== null) {
+                const lineEl = document.createElement('div');
+                lineEl.className = 'dx-search-line';
+                lineEl.textContent = hit.text.trim();
+                item.appendChild(lineEl);
+            } else {
+                const note = document.createElement('div');
+                note.className = 'dx-search-line';
+                note.textContent = hit.text;
+                item.appendChild(note);
+            }
+
+            item.addEventListener('click', () => {
+                setActiveFile(hit.fileName);
+                if (hit.line !== null) {
+                    const model = virtualFileSystem.get(hit.fileName);
+                    if (!model) return;
+                    monacoEditor.setModel(model);
+                    const startLineNumber = hit.line + 1;
+                    const startColumn = hit.start + 1;
+                    const endColumn = hit.start + hit.length + 1;
+                    const range = new monaco.Range(startLineNumber, startColumn, startLineNumber, endColumn);
+                    searchDecorations = monacoEditor.deltaDecorations(searchDecorations, [
+                        { range, options: { inlineClassName: 'dx-search-decor' } }
+                    ]);
+                    monacoEditor.revealRangeInCenter(range);
+                    monacoEditor.setSelection(range);
+                    monacoEditor.focus();
+                } else {
+                    const model = virtualFileSystem.get(hit.fileName);
+                    if (model) {
+                        monacoEditor.setModel(model);
+                        monacoEditor.focus();
+                    }
+                }
+            });
+
+            resultsEl.appendChild(item);
+        });
+    }
+
+    function clearSearchDecorations() {
+        if (!monacoEditor) return;
+        searchDecorations = monacoEditor.deltaDecorations(searchDecorations, []);
+    }
+
+    // Monaco initialization
+    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
+            language: 'plaintext',
+            theme: 'vs-dark',
+            automaticLayout: true,
+            minimap: { enabled: true },
+            fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+            fontSize: 13
+        });
+
+        // load or create initial files
+        loadProject();
+
+        document.getElementById('new-file-btn').addEventListener('click', () => {
+            const fileName = prompt("新しいファイル名を入力してください (例: component.js):");
+            if (fileName) createFile(fileName.trim());
+        });
+
+        document.getElementById('preview-btn').addEventListener('click', openPreview);
+
+        monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            saveProject();
+            return null;
+        }, 'EditorTextFocus');
+
+        monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, () => {
+            document.getElementById('new-file-btn').click();
+        });
+
+        setupMenuBar();
+
+        // render a lightweight search panel inside the sidebar so it works out of the box
+        const sidebar = document.getElementById('sidebar-container');
+        const explorer = sidebar.querySelector('.explorer-section');
+        const searchPanel = document.createElement('div');
+        searchPanel.id = 'search-panel';
+        searchPanel.style.padding = '8px';
+        searchPanel.style.display = 'block';
+        searchPanel.style.boxSizing = 'border-box';
+
+        const inputRow = document.createElement('div');
+        inputRow.style.display = 'flex';
+        inputRow.style.gap = '6px';
+        inputRow.style.marginBottom = '8px';
+
+        const input = document.createElement('input');
+        input.id = 'search-input';
+        input.placeholder = '検索語を入力';
+        input.style.flex = '1';
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') performSearch(input.value);
+        });
+
+        const btn = document.createElement('button');
+        btn.id = 'search-btn';
+        btn.textContent = '検索';
+        btn.addEventListener('click', () => performSearch(input.value));
+
+        const clearBtn = document.createElement('button');
+        clearBtn.id = 'search-clear-btn';
+        clearBtn.textContent = 'クリア';
+        clearBtn.addEventListener('click', () => { input.value = ''; renderSearchResults([]); clearSearchDecorations(); });
+
+        inputRow.appendChild(input);
+        inputRow.appendChild(btn);
+        inputRow.appendChild(clearBtn);
+
+        const results = document.createElement('div');
+        results.id = 'search-results';
+        results.style.flex = '1';
+        results.style.overflow = 'auto';
+        results.style.fontSize = '13px';
+        results.style.whiteSpace = 'pre-wrap';
+        results.innerHTML = '<div style="padding:8px;color:var(--text-inactive)">Enter query then press Enter / Search.</div>';
+
+        searchPanel.appendChild(inputRow);
+        searchPanel.appendChild(results);
+
+        // place search panel below explorer actions
+        if (explorer) explorer.appendChild(searchPanel);
+
+        // activity icons behavior (simple)
+        const activityIcons = document.querySelectorAll('.activity-icon');
+        const sidebarContainer = document.getElementById('sidebar-container');
+        let isSidebarVisible = true;
+        activityIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                activityIcons.forEach(i => i.classList.remove('active'));
+                icon.classList.add('active');
+
+                const view = icon.getAttribute('data-view');
+
+                if (view === 'explorer') {
+                    isSidebarVisible = !isSidebarVisible;
+                    if (!isSidebarVisible) icon.classList.remove('active');
+                    sidebarContainer.style.display = isSidebarVisible ? 'flex' : 'none';
+                } else if (view === 'search') {
+                    sidebarContainer.style.display = 'flex';
+                    isSidebarVisible = true;
+                } else {
+                    sidebarContainer.style.display = 'flex';
+                    isSidebarVisible = true;
+                    alert(`「${icon.title}」機能は現在ダミーです。`);
+                }
+            });
+        });
+    });
+    </script>
 </body>
 </html>
