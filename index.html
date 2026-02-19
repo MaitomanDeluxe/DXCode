@@ -2,71 +2,95 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>DXCode Mobile - Editor for iPad</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>DXCode Pro - iPad Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <link rel="stylesheet" href="styles.css">
     
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app-container">
         <div id="menu-bar">
-            <div class="menu-item" data-menu="file">ファイル</div>
-            <div class="menu-item" data-menu="edit">編集</div>
-            <div class="menu-item" data-menu="view">表示</div>
-            <div class="menu-item" data-menu="run">実行</div>
-            <div class="dropdown-menu" id="active-dropdown"></div>
+            <div class="menu-left">
+                <div class="menu-item" data-menu="file">ファイル</div>
+                <div class="menu-item" data-menu="edit">編集</div>
+                <div class="menu-item" data-menu="view">表示</div>
+                <div class="menu-item" data-menu="run">実行</div>
+            </div>
+            <div class="menu-center">DXCode - Project</div>
+            <div class="menu-right"></div>
         </div>
 
         <div id="workspace">
             <div id="activity-bar">
-                <div class="activity-icon active" data-view="explorer" title="エクスプローラー"><i class="fas fa-copy"></i></div>
-                <div class="activity-icon" data-view="search" title="検索"><i class="fas fa-search"></i></div>
-                <div class="activity-icon" data-view="scm" title="ソース管理"><i class="fas fa-code-branch"></i></div>
-                <div class="activity-icon" data-view="extensions" title="拡張機能"><i class="fas fa-puzzle-piece"></i></div>
+                <div class="activity-icon active" data-view="explorer" title="エクスプローラー"><i class="fa-regular fa-copy"></i></div>
+                <div class="activity-icon" data-view="search" title="検索"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <div class="activity-icon" data-view="scm" title="ソース管理"><i class="fa-solid fa-code-branch"></i></div>
+                <div class="activity-icon" data-view="extensions" title="拡張機能"><i class="fa-solid fa-puzzle-piece"></i></div>
             </div>
 
             <div id="sidebar-container">
                 <div id="sidebar-header">
                     <span id="header-title">エクスプローラー</span>
+                    <i class="fa-solid fa-ellipsis"></i>
                 </div>
                 
                 <div id="view-explorer" class="sidebar-view active">
-                    <div class="view-toolbar">
-                        <i class="fas fa-file-medical" id="new-file-icon" title="新規ファイル"></i>
-                        <i class="fas fa-folder-plus" id="new-folder-icon" title="新規フォルダ"></i>
-                        <i class="fas fa-file-archive" id="zip-icon" title="ZIP書き出し"></i>
+                    <div class="view-section-header">
+                        <i class="fa-solid fa-chevron-down"></i>
+                        <span>DXCODE-PROJECT</span>
+                        <div class="header-actions">
+                            <i class="fa-solid fa-file-circle-plus" id="new-file-icon"></i>
+                            <i class="fa-solid fa-file-zipper" id="zip-icon"></i>
+                        </div>
                     </div>
                     <ul id="file-list"></ul>
                 </div>
 
                 <div id="view-search" class="sidebar-view">
-                    <div class="search-box">
-                        <input type="text" id="global-search" placeholder="ファイル内を検索...">
+                    <div class="search-pane">
+                        <input type="text" id="global-search" placeholder="検索">
+                        <div id="search-results"></div>
                     </div>
-                    <div id="search-results"></div>
-                </div>
-
-                <div id="view-scm" class="sidebar-view">
-                    <div class="scm-info">未保存の変更</div>
-                    <div id="scm-list"></div>
-                    <button id="commit-btn">保存/確定 (模擬)</button>
                 </div>
 
                 <div id="view-extensions" class="sidebar-view">
-                    <div class="ext-section">
-                        <h4>テーマ設定</h4>
-                        <div class="ext-item theme-opt" data-theme="vs-dark">Dark (Default)</div>
-                        <div class="ext-item theme-opt" data-theme="vs">Light</div>
-                        <div class="ext-item theme-opt" data-theme="hc-black">High Contrast</div>
-                    </div>
-                    <div class="ext-section">
-                        <h4>XMLテーマ読込</h4>
-                        <input type="file" id="theme-loader" accept=".xml" style="display:none">
-                        <button onclick="document.getElementById('theme-loader').click()">XMLファイルを読み込む</button>
+                    <div class="extension-pane">
+                        <div class="ext-search-container">
+                            <input type="text" placeholder="拡張機能を検索する" disabled>
+                        </div>
+                        
+                        <div class="ext-group">
+                            <div class="ext-group-title">THEMES</div>
+                            <div class="ext-card theme-opt active" data-theme="vs-dark">
+                                <div class="ext-icon"><i class="fa-solid fa-palette"></i></div>
+                                <div class="ext-details">
+                                    <div class="ext-name">VS Code Dark (Default)</div>
+                                    <div class="ext-author">Microsoft</div>
+                                </div>
+                            </div>
+                            <div class="ext-card theme-opt" data-theme="hc-black">
+                                <div class="ext-icon"><i class="fa-solid fa-circle-half-stroke"></i></div>
+                                <div class="ext-details">
+                                    <div class="ext-name">High Contrast</div>
+                                    <div class="ext-author">Accessibility</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ext-group">
+                            <div class="ext-group-title">CUSTOM XML THEME</div>
+                            <div class="custom-import-area">
+                                <p>XMLファイルをインポートして外観をカスタマイズします。</p>
+                                <input type="file" id="theme-loader" accept=".xml" style="display:none">
+                                <button class="vscode-button" onclick="document.getElementById('theme-loader').click()">
+                                    <i class="fa-solid fa-file-import"></i> インポート
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -78,9 +102,17 @@
         </div>
 
         <div id="status-bar">
-            <div class="status-item"><i class="fas fa-info-circle"></i> DXCode Ready</div>
-            <div style="flex-grow: 1;"></div>
-            <div id="status-pos" class="status-item">Ln 1, Col 1</div>
+            <div class="status-left">
+                <div class="status-item bg-blue"><i class="fa-solid fa-remote"></i></div>
+                <div class="status-item"><i class="fa-solid fa-code-branch"></i> main*</div>
+                <div class="status-item"><i class="fa-solid fa-rotate"></i></div>
+            </div>
+            <div class="status-right">
+                <div id="status-pos" class="status-item">Ln 1, Col 1</div>
+                <div class="status-item">UTF-8</div>
+                <div class="status-item">JSON</div>
+                <div class="status-item"><i class="fa-regular fa-bell"></i></div>
+            </div>
         </div>
     </div>
     <script src="main.js"></script>
