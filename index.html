@@ -2,11 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>DXCode - VSCode-like Editor</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json">
+    <title>DXCode Mobile - Editor for iPad</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <link rel="stylesheet" href="styles.css">
     
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
@@ -17,44 +14,60 @@
 <body>
     <div id="app-container">
         <div id="menu-bar">
-            <div class="menu-item" data-menu="file">ファイル(F)
-                <div class="dropdown-menu">
-                    <div class="menu-option" data-action="new-file"><span>新規ファイル</span><span class="menu-shortcut">Ctrl+N</span></div>
-                    <div class="menu-option" data-action="save"><span>上書き保存</span><span class="menu-shortcut">Ctrl+S</span></div>
-                    <div class="menu-separator"></div>
-                    <div class="menu-option" data-action="download-zip"><span>ZIPで保存</span></div>
-                </div>
-            </div>
-            <div class="menu-item" data-menu="edit">編集(E)
-                <div class="dropdown-menu">
-                    <div class="menu-option" data-action="undo"><span>元に戻す</span><span class="menu-shortcut">Ctrl+Z</span></div>
-                    <div class="menu-option" data-action="redo"><span>やり直し</span><span class="menu-shortcut">Ctrl+Y</span></div>
-                </div>
-            </div>
-            <div class="menu-item" data-menu="run">実行(R)
-                <div class="dropdown-menu">
-                    <div class="menu-option" data-action="open-preview"><span>プレビュー実行</span><span class="menu-shortcut">F5</span></div>
-                </div>
-            </div>
+            <div class="menu-item" data-menu="file">ファイル</div>
+            <div class="menu-item" data-menu="edit">編集</div>
+            <div class="menu-item" data-menu="view">表示</div>
+            <div class="menu-item" data-menu="run">実行</div>
+            <div class="dropdown-menu" id="active-dropdown"></div>
         </div>
 
         <div id="workspace">
             <div id="activity-bar">
-                <div class="activity-icon active" data-view="explorer" title="エクスプローラー"><i class="fas fa-file"></i></div>
+                <div class="activity-icon active" data-view="explorer" title="エクスプローラー"><i class="fas fa-copy"></i></div>
                 <div class="activity-icon" data-view="search" title="検索"><i class="fas fa-search"></i></div>
-                <div class="activity-icon" data-view="run" title="デバッグ"><i class="fas fa-play-circle"></i></div>
-                <div class="activity-icon" data-view="settings" title="設定"><i class="fas fa-cog"></i></div>
+                <div class="activity-icon" data-view="scm" title="ソース管理"><i class="fas fa-code-branch"></i></div>
+                <div class="activity-icon" data-view="extensions" title="拡張機能"><i class="fas fa-puzzle-piece"></i></div>
             </div>
 
             <div id="sidebar-container">
-                <div id="sidebar-header">エクスプローラー</div>
-                <div class="explorer-section">
-                    <div id="action-buttons">
-                        <button id="new-file-btn" title="新規ファイル"><i class="fas fa-plus"></i></button>
-                        <button id="download-zip-btn" title="ZIP保存"><i class="fas fa-file-archive"></i></button>
-                        <button id="preview-btn" title="実行" style="display: none;"><i class="fas fa-play"></i></button>
+                <div id="sidebar-header">
+                    <span id="header-title">エクスプローラー</span>
+                </div>
+                
+                <div id="view-explorer" class="sidebar-view active">
+                    <div class="view-toolbar">
+                        <i class="fas fa-file-medical" id="new-file-icon" title="新規ファイル"></i>
+                        <i class="fas fa-folder-plus" id="new-folder-icon" title="新規フォルダ"></i>
+                        <i class="fas fa-file-archive" id="zip-icon" title="ZIP書き出し"></i>
                     </div>
                     <ul id="file-list"></ul>
+                </div>
+
+                <div id="view-search" class="sidebar-view">
+                    <div class="search-box">
+                        <input type="text" id="global-search" placeholder="ファイル内を検索...">
+                    </div>
+                    <div id="search-results"></div>
+                </div>
+
+                <div id="view-scm" class="sidebar-view">
+                    <div class="scm-info">未保存の変更</div>
+                    <div id="scm-list"></div>
+                    <button id="commit-btn">保存/確定 (模擬)</button>
+                </div>
+
+                <div id="view-extensions" class="sidebar-view">
+                    <div class="ext-section">
+                        <h4>テーマ設定</h4>
+                        <div class="ext-item theme-opt" data-theme="vs-dark">Dark (Default)</div>
+                        <div class="ext-item theme-opt" data-theme="vs">Light</div>
+                        <div class="ext-item theme-opt" data-theme="hc-black">High Contrast</div>
+                    </div>
+                    <div class="ext-section">
+                        <h4>XMLテーマ読込</h4>
+                        <input type="file" id="theme-loader" accept=".xml" style="display:none">
+                        <button onclick="document.getElementById('theme-loader').click()">XMLファイルを読み込む</button>
+                    </div>
                 </div>
             </div>
 
@@ -65,9 +78,9 @@
         </div>
 
         <div id="status-bar">
-            <div class="status-item"><i class="fas fa-code-branch"></i> main*</div>
-            <div style="flex-grow: 1;"></div> 
-            <div id="status-file-info" class="status-item">UTF-8</div>
+            <div class="status-item"><i class="fas fa-info-circle"></i> DXCode Ready</div>
+            <div style="flex-grow: 1;"></div>
+            <div id="status-pos" class="status-item">Ln 1, Col 1</div>
         </div>
     </div>
     <script src="main.js"></script>
