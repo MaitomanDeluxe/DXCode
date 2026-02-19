@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>DXCode - VSCode-like Editor</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DXCode">
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+    <link rel="stylesheet" href="styles.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div id="app-container">
+        <div id="menu-bar">
+            
+            <div class="menu-item" data-menu="file">ファイル(F)
+                <div class="dropdown-menu" id="menu-file">
+                    <div class="menu-option" data-action="new-file">
+                        <span><i class="fas fa-file"></i> 新しいファイル</span>
+                        <span class="menu-shortcut">Ctrl+N</span>
+                    </div>
+                    <div class="menu-separator"></div>
+                    <div class="menu-option" data-action="save">
+                        <span><i class="fas fa-save"></i> 上書き保存</span>
+                        <span class="menu-shortcut">Ctrl+S</span>
+                    </div>
+                    <div class="menu-option" data-action="download-zip">
+                        <span><i class="fas fa-file-archive"></i> 名前を付けて保存 (ZIP)</span>
+                    </div>
+                    <div class="menu-separator"></div>
+                    <div class="menu-option" data-action="close-file">
+                        <span><i class="fas fa-times-circle"></i> ファイルを閉じる</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-item" data-menu="edit">編集(E)
+                <div class="dropdown-menu" id="menu-edit">
+                    <div class="menu-option" data-action="undo">
+                        <span><i class="fas fa-undo"></i> 元に戻す</span>
+                        <span class="menu-shortcut">Ctrl+Z</span>
+                    </div>
+                    <div class="menu-option" data-action="redo">
+                        <span><i class="fas fa-redo"></i> やり直し</span>
+                        <span class="menu-shortcut">Ctrl+Y</span>
+                    </div>
+                    <div class="menu-separator"></div>
+                    <div class="menu-option" data-action="find">
+                        <span><i class="fas fa-search"></i> 検索</span>
+                        <span class="menu-shortcut">Ctrl+F</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="menu-item" data-menu="view">表示(V)
+                <div class="dropdown-menu" id="menu-view">
+                    <div class="menu-option" data-action="toggle-sidebar">
+                        <span><i class="fas fa-bars"></i> エクスプローラーの表示/非表示</span>
+                    </div>
+                    <div class="menu-option" data-action="toggle-activitybar">
+                        <span><i class="fas fa-grip-lines-vertical"></i> アクティビティバーの表示/非表示</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="menu-item" data-menu="run">実行(R)
+                <div class="dropdown-menu" id="menu-run">
+                    <div class="menu-option" data-action="open-preview">
+                        <span><i class="fas fa-play"></i> プレビューの開始 (HTML)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="menu-item" data-menu="help">ヘルプ(H)
+                <div class="dropdown-menu" id="menu-help">
+                    <div class="menu-option" data-action="about">
+                        <span>DXCode について</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="workspace">
+            <div id="activity-bar">
+                <div class="activity-icon active" data-view="explorer" title="エクスプローラー"><i class="fas fa-file"></i></div>
+                <div class="activity-icon" data-view="search" title="検索"><i class="fas fa-search"></i></div>
+                <div class="activity-icon" data-view="source-control" title="ソース管理"><i class="fas fa-code-branch"></i></div>
+                <div class="activity-icon" data-view="run" title="実行とデバッグ"><i class="fas fa-play-circle"></i></div>
+                <div class="activity-icon" data-view="extensions" title="拡張機能"><i class="fas fa-puzzle-piece"></i></div>
+            </div>
+
+            <div id="sidebar-container">
+                <div id="sidebar-header">エクスプローラー</div>
+                
+                <div class="explorer-section">
+                    <div id="action-buttons">
+                        <button id="new-file-btn" title="新しいファイルを作成 (Ctrl+N)">+ New File</button>
+                        <button id="download-zip-btn" title="プロジェクトをZIPとしてダウンロード"><i class="fas fa-file-archive"></i> ZIP Download</button>
+                        <button id="preview-btn" title="プレビューを表示 (HTMLファイル選択時のみ)" style="display: none;"><i class="fas fa-play"></i> Run Preview</button>
+                    </div>
+
+                    <ul id="file-list">
+                        </ul>
+                </div>
+            </div>
+
+            <div id="editor-area">
+                <div id="tab-bar">
+                    </div>
+                <div id="monaco-editor"></div>
+            </div>
+        </div>
+
+        <div id="status-bar">
+            <div class="status-item"><i class="fas fa-code-branch"></i> main*</div>
+            <div class="status-item"><i class="fas fa-sync-alt"></i> 同期</div>
+            <div style="flex-grow: 1;"></div> <div id="status-file-info" class="status-item">UTF-8 CRLF HTML</div>
+            <div class="status-item"><i class="fas fa-bell"></i></div>
+        </div>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
