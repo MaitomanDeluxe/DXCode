@@ -23,6 +23,18 @@ const DB_NAME = 'DXCodeDB';
 const STORE_NAME = 'VFS';
 
 // -----------------------------------------------------
+// グローバルユーティリティ: メニューを隠す (handleMenuAction 等から参照されるためグローバルに)
+// -----------------------------------------------------
+function hideAllMenus() {
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.classList.remove('visible');
+    });
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.classList.remove('active');
+    });
+}
+
+// -----------------------------------------------------
 // 2. IndexedDB (永続化)
 // -----------------------------------------------------
 
@@ -80,9 +92,22 @@ async function loadProject() {
 }
 
 function createInitialFiles() {
-    createFile('index.html', `<!DOCTYPE html>\n<html>\n<head>\n  <title>DXCode Test</title>\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <h1>Hello DXCode</h1>\n  <p>Press Cmd/Ctrl + S or use the File menu to save the project!</p>\n  <script src="script.js"></script>\n</body>\n</html>`, true);
-    createFile('style.css', 'body {\n  background-color: #2e2e2e;\n  color: #cccccc;\n}');
-    createFile('script.js', 'console.log("DXCode is ready!");');
+    createFile('index.html', `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>DXCode Test</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Hello DXCode</h1>
+  <p>Press Cmd/Ctrl + S to save, Ctrl+N to create a new file.</p>
+</body>
+</html>
+`, true);
+
+    createFile('style.css', 'body {\n  background-color: #2e2e2e;\n  color: #cccccc;\n}', false);
+    createFile('script.js', 'console.log("DXCode is ready!");', false);
 }
 
 
@@ -188,37 +213,21 @@ function openPreview() {
         return;
     }
 
+    // 簡潔で安全なプレビューテンプレートに置き換え（元のファイルの途中切れ等を直すため）
     const previewContent = `
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="utf-8">
             <title>DXCode Preview</title>
             <style>
-                /* コンソール用のスタイル */
-                #dxcode-console-wrapper { position: fixed; bottom: 0; left: 0; width: 100%; height: 150px; background: #222; color: #fff; z-index: 99999; display: flex; flex-direction: column; font-family: monospace; border-top: 2px solid #007acc; }
+                #dxcode-console-wrapper { position: fixed; bottom: 0; left: 0; width: 100%; height: 150px; background: #222; color: #fff; z-index: 99999; display: flex; flex-direction: column; font-family: monospace; }
                 #dxcode-console { flex-grow: 1; overflow-y: scroll; padding: 5px; }
                 #dxcode-prompt { width: 100%; border: none; background: #111; color: #fff; padding: 5px; box-sizing: border-box; }
                 .log-item { margin-bottom: 2px; }
                 .log-error { color: #f44; } .log-warn { color: #ff0; } .log-info { color: #88f; }
                 body { margin-bottom: 150px; }
-                
-                /* 閉じるボタンのスタイル */
-                #close-btn {
-                    position: fixed;
-                    top: 10px;
-                    right: 10px;
-                    background: rgba(0, 0, 0, 0.7);
-                    color: white;
-                    border: none;
-                    border-radius: 50%;
-                    width: 30px;
-                    height: 30px;
-                    line-height: 30px;
-                    text-align: center;
-                    font-size: 18px;
-                    cursor: pointer;
-                    z-index: 100000;
-                }
+                #close-btn { position: fixed; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; line-height: 30px; text-align: center; font-size: 18px; cursor: pointer; z-index: 100000; }
             </style>
             <script>
                 const VFS_FILE_NAMES = ${JSON.stringify(codeData.fileNames)};
@@ -374,14 +383,7 @@ document.getElementById('download-zip-btn').addEventListener('click', () => {
 function setupMenuBar() {
     const menuItems = document.querySelectorAll('#menu-bar .menu-item');
     
-    function hideAllMenus() {
-        document.querySelectorAll('.dropdown-menu').forEach(menu => {
-            menu.classList.remove('visible');
-        });
-        document.querySelectorAll('.menu-item').forEach(item => {
-            item.classList.remove('active');
-        });
-    }
+    // hideAllMenus をグローバルに移動したためここでは参照するだけ
 
     // メニューバーのイベントリスナー
     menuItems.forEach(item => {
@@ -484,7 +486,227 @@ function handleMenuAction(e) {
 
 
 // -----------------------------------------------------
-// 7. Monaco Editorの初期化とUIイベント
+// 7. 検索機能 (Search タブ) - 追加部分
+// -----------------------------------------------------
+
+// Monaco 上の検索ハイライトデコレーションIDを保存
+let searchDecorations = [];
+
+/**
+ * 検索パネルをサイドバーに描画する（探索的に挿入）
+ */
+function renderSearchPanel() {
+    const sidebar = document.getElementById('sidebar-container');
+    if (!sidebar) return;
+
+    // Explorer と共存するため、パネル部分のみを管理する
+    let panel = document.getElementById('search-panel');
+    if (panel) return; // 既にある場合は再利用
+
+    panel = document.createElement('div');
+    panel.id = 'search-panel';
+    panel.style.padding = '8px';
+    panel.style.display = 'flex';
+    panel.style.flexDirection = 'column';
+    panel.style.height = '100%';
+    panel.style.boxSizing = 'border-box';
+
+    // 入力エリア
+    const inputRow = document.createElement('div');
+    inputRow.style.display = 'flex';
+    inputRow.style.gap = '6px';
+    inputRow.style.marginBottom = '8px';
+
+    const input = document.createElement('input');
+    input.id = 'search-input';
+    input.placeholder = '検索語を入力 (ファイル名 / 内容)';
+    input.style.flex = '1';
+    input.style.padding = '6px';
+    input.style.fontSize = '13px';
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            performSearch(input.value);
+        }
+    });
+
+    const btn = document.createElement('button');
+    btn.id = 'search-btn';
+    btn.textContent = '検索';
+    btn.style.padding = '6px';
+    btn.addEventListener('click', () => performSearch(input.value));
+
+    const clearBtn = document.createElement('button');
+    clearBtn.id = 'search-clear-btn';
+    clearBtn.textContent = 'クリア';
+    clearBtn.style.padding = '6px';
+    clearBtn.addEventListener('click', () => {
+        input.value = '';
+        renderSearchResults([]);
+        clearSearchDecorations();
+    });
+
+    inputRow.appendChild(input);
+    inputRow.appendChild(btn);
+    inputRow.appendChild(clearBtn);
+
+    // 結果エリア
+    const results = document.createElement('div');
+    results.id = 'search-results';
+    results.style.flex = '1';
+    results.style.overflow = 'auto';
+    results.style.fontSize = '13px';
+    results.style.whiteSpace = 'pre-wrap';
+
+    panel.appendChild(inputRow);
+    panel.appendChild(results);
+
+    // Explorer の直下に挿入しておく（既存の explorer セクションと競合しない）
+    const explorerSection = sidebar.querySelector('.explorer-section');
+    if (explorerSection) {
+        explorerSection.parentNode.insertBefore(panel, explorerSection.nextSibling);
+    } else {
+        sidebar.appendChild(panel);
+    }
+
+    // 検索用スタイル注入（既存の styles.css は変更しない）
+    if (!document.getElementById('dxcode-search-style')) {
+        const style = document.createElement('style');
+        style.id = 'dxcode-search-style';
+        style.textContent = `
+            .dx-search-result { padding: 6px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; }
+            .dx-search-result:hover { background: rgba(255,255,255,0.03); }
+            .dx-search-file { font-weight: bold; color: var(--text-color); }
+            .dx-search-line { color: var(--text-inactive); font-size: 12px; margin-top: 4px; }
+            .dx-search-decor { background-color: rgba(255, 205, 43, 0.35); border-bottom: 2px solid rgba(255,205,43,0.7); }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+/**
+ * 検索を実行して結果を描画する
+ */
+function performSearch(query) {
+    const trimmed = (query || '').trim();
+    const resultsEl = document.getElementById('search-results');
+    if (!resultsEl) return;
+
+    clearSearchDecorations();
+
+    if (!trimmed) {
+        resultsEl.innerHTML = '<div style="padding:8px;color:var(--text-inactive)">検索語を入力してください。</div>';
+        return;
+    }
+
+    const qLower = trimmed.toLowerCase();
+    const hits = [];
+
+    virtualFileSystem.forEach((model, fileName) => {
+        const content = model.getValue();
+        const contentLower = content.toLowerCase();
+
+        // ファイル名ヒット
+        if (fileName.toLowerCase().includes(qLower)) {
+            hits.push({ fileName, line: null, text: '(ファイル名にヒット)', start: 0, length: 0 });
+        }
+
+        // 内容検索（行単位）
+        const lines = content.split(/\r?\n/);
+        for (let i = 0; i < lines.length; i++) {
+            const lineLower = lines[i].toLowerCase();
+            const idx = lineLower.indexOf(qLower);
+            if (idx !== -1) {
+                hits.push({ fileName, line: i, text: lines[i], start: idx, length: trimmed.length });
+            }
+        }
+    });
+
+    renderSearchResults(hits);
+}
+
+/**
+ * 検索結果を DOM に描画
+ */
+function renderSearchResults(hits) {
+    const resultsEl = document.getElementById('search-results');
+    if (!resultsEl) return;
+
+    resultsEl.innerHTML = '';
+
+    if (!hits || hits.length === 0) {
+        resultsEl.innerHTML = '<div style="padding:8px;color:var(--text-inactive)">該当する結果はありません。</div>';
+        return;
+    }
+
+    // グルーピングすると見やすいが、ここでは単純リスト表示
+    hits.forEach(hit => {
+        const item = document.createElement('div');
+        item.className = 'dx-search-result';
+
+        const fileEl = document.createElement('div');
+        fileEl.className = 'dx-search-file';
+        fileEl.textContent = hit.fileName + (hit.line !== null ? ` : ${hit.line + 1}` : '');
+
+        item.appendChild(fileEl);
+
+        if (hit.line !== null) {
+            const lineEl = document.createElement('div');
+            lineEl.className = 'dx-search-line';
+            lineEl.textContent = hit.text.trim();
+            item.appendChild(lineEl);
+        } else {
+            const note = document.createElement('div');
+            note.className = 'dx-search-line';
+            note.textContent = hit.text;
+            item.appendChild(note);
+        }
+
+        item.addEventListener('click', () => {
+            // ファイルを開いて該当箇所へフォーカス
+            setActiveFile(hit.fileName);
+            if (hit.line !== null) {
+                const model = virtualFileSystem.get(hit.fileName);
+                if (!model) return;
+
+                monacoEditor.setModel(model);
+
+                // Monaco は 1-origin
+                const startLineNumber = hit.line + 1;
+                const startColumn = hit.start + 1;
+                const endColumn = hit.start + hit.length + 1;
+
+                const range = new monaco.Range(startLineNumber, startColumn, startLineNumber, endColumn);
+                searchDecorations = monacoEditor.deltaDecorations(searchDecorations, [
+                    { range, options: { inlineClassName: 'dx-search-decor' } }
+                ]);
+                monacoEditor.revealRangeInCenter(range);
+                monacoEditor.setSelection(range);
+                monacoEditor.focus();
+            } else {
+                // ファイル名ヒットのときはファイルのみ表示
+                const model = virtualFileSystem.get(hit.fileName);
+                if (model) {
+                    monacoEditor.setModel(model);
+                    monacoEditor.focus();
+                }
+            }
+        });
+
+        resultsEl.appendChild(item);
+    });
+}
+
+/**
+ * 検索デコレーションをクリア
+ */
+function clearSearchDecorations() {
+    if (!monacoEditor) return;
+    searchDecorations = monacoEditor.deltaDecorations(searchDecorations, []);
+}
+
+
+// -----------------------------------------------------
+// 8. Monaco Editorの初期化とUIイベント
 // -----------------------------------------------------
 
 require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs' }});
@@ -538,12 +760,18 @@ require(['vs/editor/editor.main'], function() {
                 if (!isSidebarVisible) {
                     icon.classList.remove('active');
                 }
+                sidebarContainer.style.display = isSidebarVisible ? 'flex' : 'none';
+            } else if (view === 'search') {
+                // 検索パネルを表示してサイドバーを常に表示させる
+                renderSearchPanel();
+                isSidebarVisible = true;
+                sidebarContainer.style.display = 'flex';
+                // Explorer を閉じたい場合は explorer-section を折りたたむ等の処理を追加可（今は両方表示）
             } else {
                 isSidebarVisible = true;
+                sidebarContainer.style.display = 'flex';
                 alert(`「${icon.title}」機能は現在、エクスプローラー以外ダミーです。`);
             }
-            
-            sidebarContainer.style.display = isSidebarVisible ? 'flex' : 'none';
         });
     });
 });
