@@ -2,54 +2,43 @@ let monacoEditor = null;
 const virtualFileSystem = new Map();
 let activeFile = null;
 
+// --- 1. IndexedDB 連携 ---
 const DB_NAME = 'DXCodeDB';
 const STORE_NAME = 'VFS';
 
-// --- 1. IndexedDB Core ---
 function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (e) => {
-            e.target.result.createObjectStore(STORE_NAME, { keyPath: 'fileName' });
-        };
-        request.onsuccess = (e) => resolve(e.target.result);
-        request.onerror = (e) => reject(e.target.error);
+    return new Promise((r) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { keyPath: 'fileName' });
+        req.onsuccess = (e) => r(e.target.result);
     });
 }
 
 async function saveProject() {
     const db = await openDB();
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
     virtualFileSystem.forEach((model, fileName) => {
-        store.put({ fileName, content: model.getValue() });
+        tx.objectStore(STORE_NAME).put({ fileName, content: model.getValue() });
     });
-    console.log("Project Saved to IndexedDB");
 }
 
 async function loadProject() {
     const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.getAll();
-    request.onsuccess = () => {
-        if (request.result.length === 0) {
-            createFile('index.html', '<!DOCTYPE html>\n<html>\n<body>\n  <h1>Hello DXCode</h1>\n</body>\n</html>');
+    const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => {
+        if (req.result.length === 0) {
+            createFile('index.html', '<!DOCTYPE html>\n<html>\n<body>\n  <h1>Hello DXCode</h1>\n  <script>\n    console.log("エディタのコンソールに表示されます！");\n    console.error("エラーも取得可能です。");\n  </script>\n</body>\n</html>');
         } else {
-            request.result.forEach(item => createFile(item.fileName, item.content));
+            req.result.forEach(f => createFile(f.fileName, f.content));
         }
     };
 }
 
-// --- 2. File & Editor Management ---
+// --- 2. ファイル & エディタ管理 ---
 function createFile(name, content = "") {
     if (virtualFileSystem.has(name)) return;
-    const extension = name.split('.').pop();
-    let lang = 'plaintext';
-    if (extension === 'html') lang = 'html';
-    if (extension === 'js') lang = 'javascript';
-    if (extension === 'css') lang = 'css';
-
+    const ext = name.split('.').pop();
+    const lang = ext === 'html' ? 'html' : ext === 'js' ? 'javascript' : ext === 'css' ? 'css' : 'plaintext';
     const model = monaco.editor.createModel(content, lang);
     virtualFileSystem.set(name, model);
     updateFileList();
@@ -62,7 +51,7 @@ function updateFileList() {
     virtualFileSystem.forEach((_, name) => {
         const li = document.createElement('li');
         li.className = `file-item ${activeFile === name ? 'active' : ''}`;
-        li.innerHTML = `<i class="far fa-file-code" style="margin-right:8px;"></i> ${name}`;
+        li.textContent = name;
         li.onclick = () => setActiveFile(name);
         list.appendChild(li);
     });
@@ -70,129 +59,114 @@ function updateFileList() {
 
 function setActiveFile(name) {
     activeFile = name;
-    const model = virtualFileSystem.get(name);
-    monacoEditor.setModel(model);
-    
-    // Preview Button Toggle
+    monacoEditor.setModel(virtualFileSystem.get(name));
     document.getElementById('preview-btn').style.display = name.endsWith('.html') ? 'inline-block' : 'none';
-    
     updateFileList();
-    updateTabs();
-}
-
-function updateTabs() {
     const tabBar = document.getElementById('tab-bar');
-    tabBar.innerHTML = '';
-    if (activeFile) {
-        const tab = document.createElement('div');
-        tab.className = 'tab active';
-        tab.textContent = activeFile;
-        tabBar.appendChild(tab);
-    }
+    tabBar.innerHTML = `<div class="tab active">${name}</div>`;
 }
 
-// --- 3. Toolbar & Panels Logic ---
-function setupActivityBar() {
-    const activityIcons = document.querySelectorAll('.activity-icon');
-    const sidebarViews = document.querySelectorAll('.sidebar-view');
-    const sidebarHeader = document.getElementById('sidebar-header');
+// --- 3. プレビュー & コンソール通信 ---
+function openPreview() {
+    const html = virtualFileSystem.get('index.html')?.getValue() || "";
+    // ログを親に転送するスクリプトを注入
+    const hook = `
+        <script>
+            (function(){
+                const send = (type, args) => {
+                    window.opener.postMessage({
+                        type: 'dev-log', logType: type,
+                        content: Array.from(args).map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')
+                    }, '*');
+                };
+                console.log = function(){ send('info', arguments); };
+                console.error = function(){ send('error', arguments); };
+                console.warn = function(){ send('warn', arguments); };
+                window.onerror = function(m, u, l){ send('error', ['Error: ' + m + ' (Line: ' + l + ')']); };
+            })();
+        </script>
+    `;
+    const win = window.open();
+    win.document.write(hook + html);
+    win.document.close();
+    // コンソールパネルを表示
+    document.getElementById('bottom-panel').style.display = 'flex';
+}
 
-    const titles = {
-        'explorer': 'エクスプローラー',
-        'search': '検索',
-        'source-control': 'ソース管理',
-        'run': '実行とデバッグ',
-        'extensions': '拡張機能'
-    };
+window.addEventListener('message', (e) => {
+    if (e.data.type === 'dev-log') {
+        const out = document.getElementById('console-output');
+        const div = document.createElement('div');
+        div.className = `log-item log-${e.data.logType}`;
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${e.data.content}`;
+        out.appendChild(div);
+        out.scrollTop = out.scrollHeight;
+    }
+});
 
-    activityIcons.forEach(icon => {
-        icon.addEventListener('click', () => {
-            activityIcons.forEach(i => i.classList.remove('active'));
+// --- 4. ツールバー機能の初期化 ---
+function initToolbar() {
+    document.querySelectorAll('.activity-icon').forEach(icon => {
+        icon.onclick = () => {
+            document.querySelectorAll('.activity-icon').forEach(i => i.classList.remove('active'));
             icon.classList.add('active');
-
             const view = icon.dataset.view;
-            sidebarHeader.textContent = titles[view];
-            sidebarViews.forEach(v => v.style.display = 'none');
+            document.getElementById('sidebar-header').textContent = icon.title;
+            document.querySelectorAll('.sidebar-view').forEach(v => v.style.display = 'none');
             document.getElementById(`view-${view}`).style.display = 'block';
-        });
+        };
     });
 
-    // --- Search Feature ---
     document.getElementById('search-btn').onclick = () => {
         const q = document.getElementById('search-input').value.toLowerCase();
-        const results = document.getElementById('search-results');
-        results.innerHTML = '';
+        const res = document.getElementById('search-results');
+        res.innerHTML = '';
         if (!q) return;
-
-        virtualFileSystem.forEach((model, name) => {
-            if (model.getValue().toLowerCase().includes(q)) {
+        virtualFileSystem.forEach((m, name) => {
+            if (m.getValue().toLowerCase().includes(q)) {
                 const li = document.createElement('li');
-                li.style.cssText = "padding:5px; cursor:pointer; border-bottom:1px solid #333;";
-                li.innerHTML = `<i class="fas fa-file"></i> ${name}`;
+                li.style.cssText = "padding:5px; cursor:pointer; font-size:12px; border-bottom:1px solid #333;";
+                li.textContent = name;
                 li.onclick = () => setActiveFile(name);
-                results.appendChild(li);
+                res.appendChild(li);
             }
         });
     };
 
-    // --- Extension Features ---
-    document.getElementById('ext-format-btn').onclick = () => {
-        monacoEditor.getAction('editor.action.formatDocument').run();
-    };
-
-    let isHC = false;
-    document.getElementById('ext-theme-btn').onclick = () => {
-        isHC = !isHC;
-        monaco.editor.setTheme(isHC ? 'hc-black' : 'vs-dark');
-    };
-    
-    // Source Control
-    document.getElementById('force-save-btn').onclick = () => {
-        saveProject();
-        alert('Saved!');
-    };
-
-    // Run Preview
-    const runAction = () => {
-        const html = virtualFileSystem.get('index.html')?.getValue() || "<h1>No index.html</h1>";
-        const win = window.open();
-        win.document.write(html);
-        win.document.close();
-    };
-    document.getElementById('preview-btn').onclick = runAction;
-    document.getElementById('sidebar-run-btn').onclick = runAction;
+    document.getElementById('ext-format-btn').onclick = () => monacoEditor.getAction('editor.action.formatDocument').run();
+    document.getElementById('clear-console-btn').onclick = () => document.getElementById('console-output').innerHTML = '';
+    document.getElementById('close-panel-btn').onclick = () => document.getElementById('bottom-panel').style.display = 'none';
+    document.getElementById('preview-btn').onclick = openPreview;
+    document.getElementById('sidebar-run-btn').onclick = openPreview;
 }
 
-// --- 4. Initialization ---
+// --- 5. メイン初期化 ---
 document.addEventListener('DOMContentLoaded', () => {
     require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs' }});
     require(['vs/editor/editor.main'], function() {
         monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
-            theme: 'vs-dark',
-            automaticLayout: true,
-            fontSize: 14,
-            minimap: { enabled: false }
+            theme: 'vs-dark', automaticLayout: true, fontSize: 14, minimap: { enabled: false }
         });
-
         loadProject();
-        setupActivityBar();
-
+        initToolbar();
+        
         document.getElementById('new-file-btn').onclick = () => {
-            const n = prompt("File name (e.g. style.css):");
+            const n = prompt("File name:");
             if (n) createFile(n);
         };
 
-        // FPS Counter Dummy
-        setInterval(() => {
-            document.getElementById('fps-counter').textContent = `FPS: ${55 + Math.floor(Math.random() * 6)}`;
-        }, 1000);
-        
-        // Ctrl+S binding
+        document.getElementById('download-zip-btn').onclick = () => {
+            const zip = new JSZip();
+            virtualFileSystem.forEach((m, f) => zip.file(f, m.getValue()));
+            zip.generateAsync({type:"blob"}).then(c => saveAs(c, "dxcode_project.zip"));
+        };
+
         window.addEventListener('keydown', e => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                saveProject();
-            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveProject(); }
         });
+
+        setInterval(() => {
+            document.getElementById('fps-counter').textContent = `FPS: ${58 + Math.floor(Math.random()*5)}`;
+        }, 1000);
     });
 });
