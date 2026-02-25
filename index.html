@@ -2,16 +2,9 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>DXCode - Professional Web Editor</title>
-    
+    <title>DXCode - Professional IDE</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="DXCode">
-    
-    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
@@ -20,13 +13,9 @@
 <body>
     <div id="app-container">
         <div id="menu-bar">
-            <div class="menu-item">ファイル(F)</div>
-            <div class="menu-item">編集(E)</div>
-            <div class="menu-item">選択(S)</div>
-            <div class="menu-item">表示(V)</div>
-            <div class="menu-item">ヘルプ(H)</div>
-            <div style="flex-grow: 1; -webkit-app-region: drag;"></div>
-            <div id="project-title">DXCode Project</div>
+            <div class="menu-item">ファイル</div><div class="menu-item">編集</div><div class="menu-item">表示</div>
+            <div style="flex-grow: 1;"></div>
+            <div id="project-title" style="font-size: 12px; opacity: 0.7;">DXCode v1.1</div>
         </div>
 
         <div id="main-content">
@@ -43,37 +32,37 @@
                 
                 <div id="view-explorer" class="sidebar-view" style="display: block;">
                     <div id="action-buttons">
-                        <button id="new-file-btn" title="新規作成">+ New File</button>
-                        <button id="download-zip-btn" title="ZIPダウンロード"><i class="fas fa-file-archive"></i> ZIP</button>
-                        <button id="preview-btn" title="実行" style="display: none;"><i class="fas fa-play"></i> Run</button>
+                        <button id="new-file-btn">+ New</button>
+                        <button id="download-zip-btn"><i class="fas fa-file-archive"></i> ZIP</button>
+                        <button id="preview-btn" style="display: none; background: #4CAF50;"><i class="fas fa-play"></i> Run</button>
                     </div>
                     <ul id="file-list"></ul>
                 </div>
 
                 <div id="view-search" class="sidebar-view" style="display: none; padding: 10px;">
-                    <input type="text" id="search-input" placeholder="検索..." style="width:100%; padding:6px; background:#3c3c3c; color:white; border:1px solid #555;">
-                    <button id="search-btn" style="width:100%; margin-top:8px; padding:6px; background:#007acc; color:white; border:none; cursor:pointer;">検索実行</button>
-                    <ul id="search-results" style="margin-top:15px; list-style:none; padding:0; font-size:13px;"></ul>
+                    <input type="text" id="search-input" placeholder="全ファイルを検索..." class="side-input">
+                    <button id="search-btn" class="side-btn">検索</button>
+                    <ul id="search-results" class="result-list"></ul>
                 </div>
 
                 <div id="view-source-control" class="sidebar-view" style="display: none; padding: 10px;">
-                    <div style="font-size:12px; color:#888; margin-bottom:10px;">すべての変更はローカルDBに同期されています。</div>
-                    <button id="force-save-btn" style="width:100%; padding:6px; background:#333; color:white; border:1px solid #555; cursor:pointer;">IndexedDBへ強制保存</button>
+                    <p style="font-size:12px; color:#888;">変更はブラウザに自動保存されています</p>
+                    <button id="force-save-btn" class="side-btn">IndexedDBに強制同期</button>
                 </div>
 
                 <div id="view-run" class="sidebar-view" style="display: none; padding: 10px;">
-                    <button id="sidebar-run-btn" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; cursor:pointer;"><i class="fas fa-play"></i> プレビューを起動</button>
+                    <button id="sidebar-run-btn" class="side-btn" style="background:#4CAF50;"><i class="fas fa-play"></i> プレビュー開始</button>
                 </div>
 
                 <div id="view-extensions" class="sidebar-view" style="display: none; padding: 10px;">
                     <div class="ext-card">
-                        <strong>Prettier Mini</strong>
-                        <p>コードを綺麗に整形します</p>
-                        <button id="ext-format-btn">フォーマット</button>
+                        <strong>Prettier Linter</strong>
+                        <p>コードを標準形式に整形</p>
+                        <button id="ext-format-btn">整形を実行</button>
                     </div>
                     <div class="ext-card">
-                        <strong>Theme Switcher</strong>
-                        <p>エディタの配色を変更</p>
+                        <strong>Theme Engine</strong>
+                        <p>エディタのテーマ切り替え</p>
                         <button id="ext-theme-btn">テーマ切替</button>
                     </div>
                 </div>
@@ -82,17 +71,26 @@
             <div id="editor-area">
                 <div id="tab-bar"></div>
                 <div id="monaco-editor"></div>
+                
+                <div id="bottom-panel">
+                    <div id="panel-header">
+                        <div class="panel-tab active">デバッグコンソール</div>
+                        <div style="flex-grow: 1;"></div>
+                        <button id="clear-console-btn"><i class="fas fa-ban"></i></button>
+                        <button id="close-panel-btn"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div id="console-output"></div>
+                </div>
             </div>
         </div>
 
         <div id="status-bar">
-            <div class="status-item"><i class="fas fa-check"></i> 準備完了</div>
+            <div class="status-item"><i class="fas fa-check"></i> Ready</div>
             <div style="flex-grow: 1;"></div>
-            <div id="status-file-info" class="status-item">UTF-8</div>
             <div id="fps-counter" class="status-item">FPS: --</div>
+            <div class="status-item">UTF-8</div>
         </div>
     </div>
-    
     <script src="main.js"></script>
 </body>
 </html>
