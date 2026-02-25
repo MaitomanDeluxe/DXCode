@@ -184,7 +184,7 @@ function openPreview() {
 
     const previewWindow = window.open('about:blank', 'DXCode_Preview', 'width=800,height=600');
     if (!previewWindow) {
-        alert('ポップアップがブロックされました。プレビュー���表示できません。');
+        alert('ポップアップがブロックされました。プレビューを表示できません。');
         return;
     }
 
@@ -195,12 +195,21 @@ function openPreview() {
             <title>DXCode Preview</title>
             <style>
                 /* コンソール用のスタイル */
-                #dxcode-console-wrapper { position: fixed; bottom: 0; left: 0; width: 100%; height: 150px; background: #222; color: #fff; z-index: 99999; display: flex; flex-direction: column; font-family: monospace; border-top: 2px solid #007acc; }
+                #dxcode-console-wrapper { 
+                    position: fixed; bottom: 0; left: 0; width: 100%; height: 150px; 
+                    background: #222; color: #fff; z-index: 99999; 
+                    display: flex; flex-direction: column; font-family: monospace; 
+                    border-top: 2px solid #007acc; 
+                    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                }
+                #dxcode-console-wrapper.hidden {
+                    transform: translateY(150px);
+                }
                 #dxcode-console { flex-grow: 1; overflow-y: scroll; padding: 5px; }
                 #dxcode-prompt { width: 100%; border: none; background: #111; color: #fff; padding: 5px; box-sizing: border-box; }
                 .log-item { margin-bottom: 2px; }
                 .log-error { color: #f44; } .log-warn { color: #ff0; } .log-info { color: #88f; }
-                body { margin-bottom: 150px; }
+                body { margin-bottom: 150px; transition: margin-bottom 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
                 
                 /* 閉じるボタンのスタイル */
                 #close-btn {
@@ -220,18 +229,23 @@ function openPreview() {
                     z-index: 100000;
                 }
 
-                /* コンソール表示/非表示トグルボタンのスタイル */
+                /* 画像風の開閉タブボタンのスタイル */
                 #console-toggle-btn {
-                    position: fixed;
-                    top: 10px;
-                    right: 50px;
-                    background: rgba(0,0,0,0.7);
+                    position: absolute;
+                    top: -30px; 
+                    right: 20px; 
+                    background: rgba(45, 45, 45, 0.95); 
                     color: white;
                     border: none;
-                    border-radius: 4px;
-                    padding: 4px 8px;
+                    border-radius: 12px 12px 0 0; 
+                    width: 60px;
+                    height: 30px;
                     cursor: pointer;
                     z-index: 100000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
                 }
             </style>
             <script>
@@ -323,29 +337,36 @@ function openPreview() {
                     document.body.appendChild(closeBtn);
                 }
 
-                // コンソール表示/非表示トグルボタンの機能（追加）
+                // コンソール表示/非表示トグルボタンの機能（画像風タブに変更）
                 function setupConsoleToggle() {
-                    const toggleBtn = document.createElement('button');
+                    const toggleBtn = document.createElement('div');
                     toggleBtn.id = 'console-toggle-btn';
                     toggleBtn.title = '仮想コンソールの表示/非表示';
-                    toggleBtn.textContent = 'Hide Console'; // 初期は表示なので「Hide」
                     
-                    // 初期表示状���
+                    // 画像のようなシンプルな矢印アイコン（SVG）
+                    const iconDown = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+                    const iconUp = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><polyline points="18 15 12 9 6 15"></polyline></svg>';
+                    
+                    // 初期は開いているので下向き矢印
+                    toggleBtn.innerHTML = iconDown;
+                    
                     let consoleVisible = true;
 
                     toggleBtn.onclick = function() {
                         consoleVisible = !consoleVisible;
                         if (consoleVisible) {
-                            wrapper.style.display = 'flex';
+                            wrapper.classList.remove('hidden');
                             document.body.style.marginBottom = '150px';
-                            toggleBtn.textContent = 'Hide Console';
+                            toggleBtn.innerHTML = iconDown;
                         } else {
-                            wrapper.style.display = 'none';
+                            wrapper.classList.add('hidden');
                             document.body.style.marginBottom = '0';
-                            toggleBtn.textContent = 'Show Console';
+                            toggleBtn.innerHTML = iconUp; // 閉じたら上向き矢印に変更
                         }
                     };
-                    document.body.appendChild(toggleBtn);
+                    
+                    // bodyではなく、コンソール本体(wrapper)にくっつける
+                    wrapper.appendChild(toggleBtn);
                 }
                 
                 // ユーザーコード実行ロジック
@@ -353,7 +374,7 @@ function openPreview() {
                     document.body.appendChild(wrapper);
                     console.log('DXCode Virtual Console initialized.');
                     setupCloseButton(); 
-                    setupConsoleToggle(); // 追加したトグルをセットアップ
+                    setupConsoleToggle(); 
                 
                     const jsCode = document.getElementById('user-script').textContent;
                     try {
@@ -431,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('preview-btn').addEventListener('click', openPreview);
 
-        // キーボードシ��ートカット
+        // キーボードショートカット
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             saveProject();
             return null; 
@@ -440,9 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, () => {
             document.getElementById('new-file-btn').click();
         });
-
-        // メニューバーのセットアップ
-        setupMenuBar(); 
 
         // アクティビティバーのイベントリスナー設定
         const activityIcons = document.querySelectorAll('.activity-icon');
