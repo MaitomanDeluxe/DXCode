@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>DXCode - Professional IDE</title>
+    <title>DXCode - Ultimate IDE</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs/loader.js"></script>
@@ -13,10 +13,8 @@
 <body>
     <div id="app-container">
         <div id="menu-bar">
-            <div style="margin-right: 20px; font-weight: bold; color: #fff;">DXCode</div>
-            <div class="menu-item">ファイル</div>
-            <div class="menu-item">編集</div>
-            <div class="menu-item">表示</div>
+            <div style="font-weight: bold; color: #fff; margin-right: 20px;">DXCode</div>
+            <div class="menu-item">File</div><div class="menu-item">Edit</div><div class="menu-item">View</div>
         </div>
 
         <div id="main-content">
@@ -27,32 +25,34 @@
             </div>
 
             <div id="sidebar-container">
-                <div id="sidebar-header">エクスプローラー</div>
+                <div id="sidebar-header">EXPLORER</div>
                 
                 <div id="view-explorer" class="sidebar-view">
                     <div id="action-buttons">
-                        <button id="new-file-btn" title="新規ファイル">+ New</button>
-                        <button id="download-zip-btn" title="ZIP保存"><i class="fas fa-file-archive"></i> ZIP</button>
+                        <button id="new-file-btn">+ New</button>
+                        <button id="download-zip-btn"><i class="fas fa-file-archive"></i> ZIP</button>
                         <button id="preview-btn" style="display:none;"><i class="fas fa-play"></i> Run</button>
                     </div>
                     <ul id="file-list"></ul>
                 </div>
 
                 <div id="view-search" class="sidebar-view" style="display:none; padding:10px;">
-                    <input type="text" id="search-input" class="search-box" placeholder="検索">
-                    <input type="text" id="replace-input" class="search-box" placeholder="置換">
-                    <button id="replace-all-btn" class="action-btn">すべて置換</button>
-                    <div id="search-results" style="margin-top:15px; font-size:11px; color:#888;">全ファイルから検索し一括置換します</div>
+                    <input type="text" id="search-input" class="search-box" placeholder="Search">
+                    <input type="text" id="replace-input" class="search-box" placeholder="Replace">
+                    <button id="replace-all-btn" class="action-btn">Replace All</button>
+                    <div id="search-results" style="margin-top:10px; font-size:11px; color:#666;">全ファイルの内容を置換します</div>
                 </div>
 
                 <div id="view-extensions" class="sidebar-view" style="display:none; padding:10px;">
-                    <div class="ext-item">
-                        <div class="ext-info"><strong>Prettier</strong><p>コード整形を有効化</p></div>
-                        <button class="ext-btn active">有効</button>
+                    <div class="ext-card">
+                        <div class="ext-title">Prettier</div>
+                        <div class="ext-desc">Code formatter</div>
+                        <button class="ext-btn active">Enabled</button>
                     </div>
-                    <div class="ext-item">
-                        <div class="ext-info"><strong>Python Linter</strong><p>Pyflakes解析</p></div>
-                        <button class="ext-btn">無効</button>
+                    <div class="ext-card">
+                        <div class="ext-title">Python InteliSense</div>
+                        <div class="ext-desc">Linter & Autocomplete</div>
+                        <button class="ext-btn">Disabled</button>
                     </div>
                 </div>
             </div>
@@ -65,9 +65,9 @@
 
         <div id="status-bar">
             <div class="status-item"><i class="fas fa-code-branch"></i> main*</div>
-            <div style="flex-grow: 1;"></div>
+            <div style="flex-grow:1"></div>
             <div class="status-item">UTF-8</div>
-            <div class="status-item">Spaces: 4</div>
+            <div class="status-item">JavaScript</div>
         </div>
     </div>
     <script src="main.js"></script>
