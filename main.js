@@ -1,46 +1,37 @@
-/**
- * DXCode v1.5 - Final Integrated Edition
- */
-
 let monacoEditor = null;
 const virtualFileSystem = new Map();
 let activeFile = null;
 
-// --- 初期ファイル作成 ---
-function createInitialFiles() {
-    createFile('index.html', `<!DOCTYPE html>\n<html>\n<head><title>Test</title></head>\n<body>\n  <h1>Hello World</h1>\n  <script src="script.js"></script>\n</body>\n</html>`, true);
-    createFile('style.css', 'h1 { color: #007acc; font-family: sans-serif; }');
-    createFile('script.js', 'console.log("System running...");');
+// --- 1. アイコン・言語設定 ---
+function getFileInfo(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    const map = {
+        html: { icon: '<i class="fab fa-html5" style="color:#e34c26"></i>', lang: 'html' },
+        css:  { icon: '<i class="fab fa-css3-alt" style="color:#264de4"></i>', lang: 'css' },
+        js:   { icon: '<i class="fab fa-js-square" style="color:#f7df1e"></i>', lang: 'javascript' },
+        py:   { icon: '<i class="fab fa-python" style="color:#3776ab"></i>', lang: 'python' },
+        json: { icon: '<i class="fas fa-code" style="color:#fbc02d"></i>', lang: 'json' }
+    };
+    return map[ext] || { icon: '<i class="far fa-file"></i>', lang: 'plaintext' };
 }
 
-// --- アイコン設定 ---
-function getFileIcon(fileName) {
-    const ext = fileName.split('.').pop().toLowerCase();
-    switch (ext) {
-        case 'html': return '<i class="fab fa-html5" style="color: #e34c26;"></i>';
-        case 'css':  return '<i class="fab fa-css3-alt" style="color: #264de4;"></i>';
-        case 'js':   return '<i class="fab fa-js-square" style="color: #f7df1e;"></i>';
-        case 'py':   return '<i class="fab fa-python" style="color: #3776ab;"></i>';
-        default:     return '<i class="far fa-file" style="color: #888;"></i>';
-    }
+// --- 2. ファイルシステム ---
+function createFile(name, content = '', activate = true) {
+    if (virtualFileSystem.has(name)) return;
+    const info = getFileInfo(name);
+    const model = monaco.editor.createModel(content, info.lang);
+    virtualFileSystem.set(name, model);
+    if (activate) setActiveFile(name);
+    renderUI();
 }
 
-function createFile(fileName, content = '', activate = true) {
-    if (virtualFileSystem.has(fileName)) return;
-    const lang = fileName.endsWith('.py') ? 'python' : fileName.split('.').pop();
-    const model = monaco.editor.createModel(content, lang === 'js' ? 'javascript' : lang);
-    virtualFileSystem.set(fileName, model);
-    if (activate) setActiveFile(fileName);
-    updateUI();
+function setActiveFile(name) {
+    activeFile = name;
+    monacoEditor.setModel(virtualFileSystem.get(name));
+    renderUI();
 }
 
-function setActiveFile(fileName) {
-    activeFile = fileName;
-    monacoEditor.setModel(virtualFileSystem.get(fileName));
-    updateUI();
-}
-
-function updateUI() {
+function renderUI() {
     const list = document.getElementById('file-list');
     const tabs = document.getElementById('tab-bar');
     list.innerHTML = ''; tabs.innerHTML = '';
@@ -49,73 +40,86 @@ function updateUI() {
 
     virtualFileSystem.forEach((model, name) => {
         const isActive = name === activeFile;
+        const info = getFileInfo(name);
+        
         // Explorer
         const li = document.createElement('li');
-        li.className = 'file-item' + (isActive ? ' active' : '');
-        li.innerHTML = `<div class="indent-guide"></div><span class="file-icon">${getFileIcon(name)}</span>${name}`;
+        li.className = `file-item ${isActive ? 'active' : ''}`;
+        li.innerHTML = `<div class="indent-guide"></div><span class="file-icon">${info.icon}</span>${name}`;
         li.onclick = () => setActiveFile(name);
         list.appendChild(li);
-        // Tabs
+
+        // Tab
         const tab = document.createElement('div');
-        tab.className = 'tab' + (isActive ? ' active' : '');
-        tab.innerHTML = `${getFileIcon(name)} <span style="margin-left:8px">${name}</span>`;
+        tab.className = `tab ${isActive ? 'active' : ''}`;
+        tab.innerHTML = `${info.icon} <span style="margin-left:7px">${name}</span>`;
         tab.onclick = () => setActiveFile(name);
         tabs.appendChild(tab);
     });
 }
 
-// --- タブ切り替えロジック ---
+// --- 3. サイドバー切り替え ---
 document.querySelectorAll('.activity-icon').forEach(icon => {
     icon.onclick = () => {
         document.querySelectorAll('.activity-icon').forEach(i => i.classList.remove('active'));
         icon.classList.add('active');
-        document.getElementById('sidebar-header').textContent = icon.title;
+        document.getElementById('sidebar-header').textContent = icon.title.toUpperCase();
         document.querySelectorAll('.sidebar-view').forEach(v => v.style.display = 'none');
-        document.getElementById('view-' + icon.dataset.view).style.display = 'block';
+        document.getElementById(`view-${icon.dataset.view}`).style.display = 'block';
     };
 });
 
-// --- 検索・置換ロジック ---
+// --- 4. 検索・置換 ---
 document.getElementById('replace-all-btn').onclick = () => {
     const s = document.getElementById('search-input').value;
     const r = document.getElementById('replace-input').value;
-    if(!s) return;
+    if (!s) return;
     virtualFileSystem.forEach(model => {
-        const val = model.getValue();
-        if(val.includes(s)) model.setValue(val.split(s).join(r));
+        const text = model.getValue();
+        if (text.includes(s)) model.setValue(text.split(s).join(r));
     });
-    alert('一括置換完了');
+    alert('一括置換を完了しました');
 };
 
-// --- プレビュー (デベロッパーツール付) ---
+// --- 5. デバッグ機能付きプレビュー ---
 function openPreview() {
-    const html = virtualFileSystem.get('index.html').getValue();
+    const html = virtualFileSystem.get('index.html')?.getValue() || '';
     const css = virtualFileSystem.get('style.css')?.getValue() || '';
     const js = virtualFileSystem.get('script.js')?.getValue() || '';
 
     const win = window.open('about:blank', '_blank');
     win.document.write(`
+        <!DOCTYPE html>
         <html>
         <head>
             <style>
-                body { margin: 0; display: flex; transition: 0.3s; background: #fff; }
-                #port { flex-grow: 1; overflow: auto; padding: 20px; }
-                #dev { position: fixed; right: 0; top: 0; width: 350px; height: 100%; background: #202124; color: #fff; border-left: 1px solid #333; display: flex; flex-direction: column; font-family: monospace; font-size: 12px; }
-                #logs { flex-grow: 1; overflow: auto; padding: 10px; border-bottom: 1px solid #333; }
-                #in { width: 100%; background: #333; border: none; color: #fff; padding: 10px; outline: none; }
+                body { margin: 0; display: flex; height: 100vh; font-family: sans-serif; }
+                #app { flex-grow: 1; padding: 20px; overflow: auto; }
+                #dev-tools { width: 350px; background: #202124; color: #bdc1c6; display: flex; flex-direction: column; border-left: 1px solid #333; font-family: monospace; }
+                #console { flex-grow: 1; padding: 10px; overflow-y: auto; font-size: 12px; }
+                #input { background: #35363a; border: none; color: #fff; padding: 10px; outline: none; border-top: 1px solid #444; }
+                .log { border-bottom: 1px solid #333; padding: 2px 0; }
             </style>
         </head>
         <body>
-            <div id="port">${html}<style>${css}</style></div>
-            <div id="dev"><div id="logs">-- Console --</div><input id="in" placeholder="> code"></div>
+            <div id="app">${html}<style>${css}</style></div>
+            <div id="dev-tools">
+                <div style="background:#292a2d; padding:8px; font-size:11px; border-bottom:1px solid #333">CONSOLE</div>
+                <div id="console"></div>
+                <input id="input" placeholder="> 実行するJSを入力...">
+            </div>
             <script>
-                const l = document.getElementById('logs');
-                window.console.log = (m) => { l.innerHTML += '<div>' + m + '</div>'; };
-                document.getElementById('in').onkeydown = (e) => {
-                    if(e.key === 'Enter') { 
-                        l.innerHTML += '<div style="color:#8ab4f8">> ' + e.target.value + '</div>';
-                        try { l.innerHTML += '<div>' + eval(e.target.value) + '</div>'; } 
-                        catch(err) { l.innerHTML += '<div style="color:red">' + err + '</div>'; }
+                const con = document.getElementById('console');
+                window.console.log = (...args) => {
+                    const d = document.createElement('div'); d.className='log';
+                    d.textContent = args.join(' '); con.appendChild(d);
+                    con.scrollTop = con.scrollHeight;
+                };
+                document.getElementById('input').onkeydown = (e) => {
+                    if(e.key === 'Enter') {
+                        console.log('> ' + e.target.value);
+                        try { console.log('< ' + eval(e.target.value)); }
+                        catch(err) { console.log('Error: ' + err); }
                         e.target.value = '';
                     }
                 };
@@ -124,16 +128,21 @@ function openPreview() {
         </body>
         </html>
     `);
+    win.document.close();
 }
 
-// --- 初期化 ---
+// --- 6. 初期化 ---
 document.addEventListener('DOMContentLoaded', () => {
     require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs' }});
     require(['vs/editor/editor.main'], function() {
         monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
-            theme: 'vs-dark', automaticLayout: true, fontSize: 14
+            theme: 'vs-dark', automaticLayout: true, fontSize: 14, minimap: { enabled: false }
         });
-        createInitialFiles();
+        
+        createFile('index.html', '<h1>Hello!</h1>', false);
+        createFile('style.css', 'h1 { color: #007acc; }', false);
+        createFile('script.js', 'console.log("Ready.");', true);
+
         document.getElementById('new-file-btn').onclick = () => {
             const n = prompt("ファイル名:"); if(n) createFile(n);
         };
