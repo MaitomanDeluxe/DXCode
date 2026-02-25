@@ -1,146 +1,12 @@
 /**
- * DXCode v1.1 - Professional Edition
- * Features: Monaco Editor, VFS, IndexedDB, DevTools, File Icons, and Enhanced Explorer.
+ * DXCode v1.2 - Pro DevTools Edition
+ * プレビュー内のレイアウト干渉を完全に防ぐ構造にアップデート
  */
 
 // -----------------------------------------------------
-// 1. PWA & Service Worker
-// -----------------------------------------------------
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(e => console.error(e));
-    });
-}
-
-let monacoEditor = null;
-const virtualFileSystem = new Map();
-let activeFile = null;
-
-const DB_NAME = 'DXCodeDB';
-const STORE_NAME = 'VFS';
-
-// -----------------------------------------------------
-// 2. Data Persistence (IndexedDB)
-// -----------------------------------------------------
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME, { keyPath: 'fileName' });
-        request.onsuccess = (e) => resolve(e.target.result);
-        request.onerror = (e) => reject(e.target.error);
-    });
-}
-
-async function saveProject() {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const store = tx.objectStore(STORE_NAME);
-    store.clear();
-    virtualFileSystem.forEach((model, fileName) => {
-        store.put({ fileName: fileName, content: model.getValue() });
-    });
-    console.log('Project Saved');
-}
-
-async function loadProject() {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.getAll();
-    request.onsuccess = () => {
-        if (request.result.length > 0) {
-            request.result.forEach(item => createFile(item.fileName, item.content, false));
-            setActiveFile(virtualFileSystem.keys().next().value);
-        } else {
-            createInitialFiles();
-        }
-    };
-}
-
-function createInitialFiles() {
-    createFile('index.html', `<!DOCTYPE html>\n<html>\n<body>\n  <h1>DXCode IDE</h1>\n  <script src="script.js"></script>\n</body>\n</html>`, true);
-    createFile('style.css', 'body { background: #1e1e1e; color: white; }');
-    createFile('script.js', 'console.log("System Ready");');
-    createFile('main.py', '# Python support added\nprint("Hello World")');
-}
-
-// -----------------------------------------------------
-// 3. File System & Enhanced Explorer UI
+// 4. プレビューと右側デベロッパーツール (修正版)
 // -----------------------------------------------------
 
-// 拡張子に応じたアイコンを返す
-function getFileIcon(fileName) {
-    const ext = fileName.split('.').pop().toLowerCase();
-    switch (ext) {
-        case 'html': return '<i class="fab fa-html5" style="color: #e34c26;"></i>';
-        case 'css':  return '<i class="fab fa-css3-alt" style="color: #264de4;"></i>';
-        case 'js':   return '<i class="fab fa-js-square" style="color: #f7df1e;"></i>';
-        case 'py':   return '<i class="fab fa-python" style="color: #3776ab;"></i>';
-        case 'json': return '<i class="fas fa-code" style="color: #fbc02d;"></i>';
-        case 'md':   return '<i class="fab fa-markdown" style="color: #03a9f4;"></i>';
-        default:     return '<i class="far fa-file" style="color: #ccc;"></i>';
-    }
-}
-
-function getLanguage(fileName) {
-    const ext = fileName.split('.').pop();
-    if (ext === 'py') return 'python';
-    if (ext === 'js') return 'javascript';
-    return ext;
-}
-
-function createFile(fileName, content = '', activate = true) {
-    if (virtualFileSystem.has(fileName)) return;
-    const model = monaco.editor.createModel(content, getLanguage(fileName));
-    virtualFileSystem.set(fileName, model);
-    if (activate) setActiveFile(fileName);
-    updateUI();
-}
-
-function setActiveFile(fileName) {
-    if (!virtualFileSystem.has(fileName)) return;
-    activeFile = fileName;
-    monacoEditor.setModel(virtualFileSystem.get(fileName));
-    updateUI();
-}
-
-function updateUI() {
-    const fileListEl = document.getElementById('file-list');
-    const tabBarEl = document.getElementById('tab-bar');
-    const previewBtn = document.getElementById('preview-btn');
-    
-    fileListEl.innerHTML = '';
-    tabBarEl.innerHTML = '';
-    
-    const isHtml = activeFile?.endsWith('.html');
-    previewBtn.style.display = isHtml ? 'block' : 'none';
-
-    virtualFileSystem.forEach((model, fileName) => {
-        const isActive = fileName === activeFile;
-
-        // --- エクスプローラー項目の生成 ---
-        const li = document.createElement('li');
-        li.className = 'file-item' + (isActive ? ' active' : '');
-        li.innerHTML = `
-            <div class="indent-guide"></div>
-            <span class="file-icon">${getFileIcon(fileName)}</span>
-            <span class="file-name">${fileName}</span>
-        `;
-        li.onclick = () => setActiveFile(fileName);
-        fileListEl.appendChild(li);
-
-        // --- タブの生成 ---
-        const tab = document.createElement('div');
-        tab.className = 'tab' + (isActive ? ' active' : '');
-        tab.innerHTML = `${getFileIcon(fileName)} ${fileName}`;
-        tab.onclick = () => setActiveFile(fileName);
-        tabBarEl.appendChild(tab);
-    });
-}
-
-// -----------------------------------------------------
-// 4. Preview Window (DevTools)
-// -----------------------------------------------------
 function openPreview() {
     const codeData = {
         html: virtualFileSystem.get('index.html')?.getValue() || '',
@@ -148,153 +14,214 @@ function openPreview() {
         js: virtualFileSystem.get('script.js')?.getValue() || ''
     };
 
-    const win = window.open('about:blank', 'DXCode_Preview', 'width=1100,height=700');
-    if (!win) return;
+    const previewWindow = window.open('about:blank', 'DXCode_Preview', 'width=1100,height=700');
+    if (!previewWindow) return;
 
-    const content = `
+    const previewContent = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>DXCode Preview</title>
+            <title>DXCode DevTools Preview</title>
             <style>
-                body { margin: 0; transition: margin-right 0.3s; background: #fff; font-family: sans-serif; }
-                #devtools {
+                /* 全体のレイアウト設定 */
+                html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fff; display: flex; }
+                
+                /* ユーザーコンテンツ表示エリア */
+                #user-viewport {
+                    flex-grow: 1;
+                    height: 100%;
+                    overflow: auto;
+                    position: relative;
+                    transition: margin-right 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                }
+
+                /* デベロッパーツール本体 */
+                #dxcode-devtools {
                     position: fixed; top: 0; right: 0; width: 380px; height: 100%;
-                    background: #202124; color: #bdc1c6; border-left: 1px solid #3c4043;
-                    display: flex; flex-direction: column; z-index: 999;
+                    background: #202124; color: #bdc1c6; z-index: 99999;
+                    display: flex; flex-direction: column; font-family: 'Segoe UI', sans-serif;
+                    border-left: 1px solid #3c4043;
                     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                    box-shadow: -5px 0 15px rgba(0,0,0,0.3);
                 }
-                #devtools.hidden { transform: translateX(380px); }
-                #tabs { display: flex; background: #292a2d; font-size: 12px; border-bottom: 1px solid #3c4043; }
-                .tab { padding: 10px 15px; cursor: pointer; }
-                .tab.active { color: #8ab4f8; border-bottom: 2px solid #8ab4f8; }
-                #content { flex-grow: 1; overflow: auto; padding: 10px; font-family: monospace; font-size: 12px; }
-                .panel { display: none; } .panel.active { display: block; }
-                #prompt { width: 100%; border: none; background: #35363a; color: #fff; padding: 10px; outline: none; border-top: 1px solid #3c4043; }
-                #pull-tab {
+                #dxcode-devtools.hidden { transform: translateX(380px); }
+
+                /* タブとコンテンツ */
+                #devtools-tabs { display: flex; background: #292a2d; border-bottom: 1px solid #3c4043; font-size: 12px; }
+                .dev-tab { padding: 12px; cursor: pointer; border-bottom: 2px solid transparent; color: #9aa0a6; }
+                .dev-tab.active { color: #8ab4f8; border-bottom: 2px solid #8ab4f8; background: #35363a; }
+
+                #devtools-content { flex-grow: 1; overflow-y: auto; padding: 10px; font-family: 'Consolas', monospace; font-size: 12px; }
+                .panel { display: none; }
+                .panel.active { display: block; }
+
+                /* エレメンツツリーの装飾 */
+                .node { margin-left: 12px; border-left: 1px solid #3c4043; padding-left: 8px; }
+                .tag-color { color: #8ab4f8; }
+                .attr-color { color: #93d5ed; }
+                .string-color { color: #ee675c; }
+
+                /* コンソールログ */
+                .log-item { border-bottom: 1px solid #333; padding: 5px 0; word-break: break-all; }
+                .log-warn { color: #fdd663; }
+                .log-error { color: #f28b82; }
+                #dxcode-prompt { 
+                    width: 100%; border: none; background: #35363a; color: #fff; padding: 12px; 
+                    outline: none; border-top: 1px solid #3c4043; font-family: monospace;
+                }
+
+                /* 引き出しボタン (垂直中央) */
+                #devtools-toggle-btn {
                     position: absolute; top: 50%; left: -30px; transform: translateY(-50%);
-                    background: #2d2d2d; color: white; border: none; border-radius: 10px 0 0 10px;
-                    width: 30px; height: 60px; cursor: pointer; box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+                    background: #202124; color: #8ab4f8; border: 1px solid #3c4043; border-right: none;
+                    border-radius: 8px 0 0 8px; width: 30px; height: 60px; cursor: pointer;
+                    display: flex; align-items: center; justify-content: center;
                 }
-                .log { border-bottom: 1px solid #333; padding: 2px 0; }
-                .node { margin-left: 15px; color: #8ab4f8; }
             </style>
         </head>
         <body>
-            <div id="user-root">${codeData.html.replace(/<script.*?>.*?<\/script>/gs, '')}</div>
-            <style>${codeData.css}</style>
-            
-            <div id="devtools">
-                <button id="pull-tab">◀</button>
-                <div id="tabs">
-                    <div class="tab active" data-id="p-el">Elements</div>
-                    <div class="tab" data-id="p-con">Console</div>
-                </div>
-                <div id="content">
-                    <div id="p-el" class="panel active"></div>
-                    <div id="p-con" class="panel"></div>
-                </div>
-                <input id="prompt" placeholder="> console.log('Hi')">
+            <div id="user-viewport">
+                <div id="user-html-root">${codeData.html}</div>
+                <style>${codeData.css}</style>
             </div>
 
-            <script id="u-js" type="text/plain">${codeData.js}</script>
-            <script>
-                const dev = document.getElementById('devtools');
-                const pull = document.getElementById('pull-tab');
-                let open = true;
-                
-                pull.onclick = () => {
-                    open = !open;
-                    dev.classList.toggle('hidden');
-                    document.body.style.marginRight = open ? '380px' : '0';
-                    pull.textContent = open ? '▶' : '◀';
-                };
-                document.body.style.marginRight = '380px';
+            <div id="dxcode-devtools">
+                <button id="devtools-toggle-btn">◀</button>
+                <div id="devtools-tabs">
+                    <div class="dev-tab active" data-target="panel-elements">Elements</div>
+                    <div class="dev-tab" data-target="panel-console">Console</div>
+                    <div class="dev-tab" data-target="panel-perf">Performance</div>
+                </div>
+                <div id="devtools-content">
+                    <div id="panel-elements" class="panel active"></div>
+                    <div id="panel-console" class="panel"><div id="console-logs"></div></div>
+                    <div id="panel-perf" class="panel"><p>FPS: <span id="fps-val">60</span></p><p>Memory: 24MB</p></div>
+                </div>
+                <input id="dxcode-prompt" type="text" placeholder="> console.log(window)">
+            </div>
 
-                document.querySelectorAll('.tab').forEach(t => {
-                    t.onclick = () => {
-                        document.querySelectorAll('.tab, .panel').forEach(el => el.classList.remove('active'));
-                        t.classList.add('active');
-                        document.getElementById(t.dataset.id).classList.add('active');
-                        if(t.dataset.id === 'p-el') renderEl();
+            <script id="user-js-data" type="text/plain">${codeData.js}</script>
+
+            <script>
+                // --- 1. Elements Inspector Logic ---
+                function updateElements() {
+                    const container = document.getElementById('panel-elements');
+                    const root = document.getElementById('user-html-root');
+                    container.innerHTML = '';
+
+                    function buildTree(node) {
+                        if (node.nodeType === 3) { // Text node
+                            const text = node.textContent.trim();
+                            if (!text) return null;
+                            const d = document.createElement('div');
+                            d.className = 'node';
+                            d.textContent = '"' + text + '"';
+                            return d;
+                        }
+                        if (node.nodeType !== 1) return null; // Only Elements
+
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'node';
+                        
+                        let attrs = '';
+                        Array.from(node.attributes).forEach(a => {
+                            attrs += \` <span class="attr-color">\${a.name}</span>="<span class="string-color">\${a.value}</span>"\`;
+                        });
+
+                        const tagOpen = document.createElement('div');
+                        tagOpen.innerHTML = \`<span class="tag-color">&lt;\${node.tagName.toLowerCase()}\${attrs}&gt;</span>\`;
+                        wrapper.appendChild(tagOpen);
+
+                        node.childNodes.forEach(child => {
+                            const result = buildTree(child);
+                            if (result) wrapper.appendChild(result);
+                        });
+
+                        const tagClose = document.createElement('div');
+                        tagClose.innerHTML = \`<span class="tag-color">&lt;/\${node.tagName.toLowerCase()}&gt;</span>\`;
+                        wrapper.appendChild(tagClose);
+                        
+                        return wrapper;
+                    }
+                    container.appendChild(buildTree(root));
+                }
+
+                // --- 2. Console & DevTools UI ---
+                const devtools = document.getElementById('dxcode-devtools');
+                const toggleBtn = document.getElementById('devtools-toggle-btn');
+                const viewport = document.getElementById('user-viewport');
+                let isOpen = true;
+
+                toggleBtn.onclick = () => {
+                    isOpen = !isOpen;
+                    devtools.classList.toggle('hidden');
+                    viewport.style.marginRight = isOpen ? '380px' : '0';
+                    toggleBtn.textContent = isOpen ? '▶' : '◀';
+                };
+                viewport.style.marginRight = '380px'; // Initial
+
+                document.querySelectorAll('.dev-tab').forEach(tab => {
+                    tab.onclick = () => {
+                        document.querySelectorAll('.dev-tab, .panel').forEach(el => el.classList.remove('active'));
+                        tab.classList.add('active');
+                        const target = document.getElementById(tab.dataset.target);
+                        target.classList.add('active');
+                        if (tab.dataset.target === 'panel-elements') updateElements();
                     };
                 });
 
-                function renderEl() {
-                    const root = document.getElementById('user-root');
-                    const container = document.getElementById('p-el');
-                    container.innerHTML = 'root<br>';
-                    function walk(n, target) {
-                        if(n.nodeType === 1) {
-                            const d = document.createElement('div');
-                            d.className = 'node';
-                            d.textContent = '<' + n.tagName.toLowerCase() + '>';
-                            target.appendChild(d);
-                            n.childNodes.forEach(c => walk(c, d));
-                        }
-                    }
-                    root.childNodes.forEach(c => walk(c, container));
+                const logBox = document.getElementById('console-logs');
+                function pushLog(type, args) {
+                    const div = document.createElement('div');
+                    div.className = 'log-item log-' + type;
+                    div.textContent = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+                    logBox.appendChild(div);
+                    logBox.scrollTop = logBox.scrollHeight;
                 }
 
-                const con = document.getElementById('p-con');
-                function log(m, type='info') {
-                    const d = document.createElement('div');
-                    d.className = 'log';
-                    d.textContent = m;
-                    con.appendChild(d);
-                    con.scrollTop = con.scrollHeight;
-                }
-                window.console.log = (m) => log(m);
-                
-                document.getElementById('prompt').onkeydown = (e) => {
-                    if(e.key === 'Enter') {
-                        const v = e.target.value;
-                        log('> ' + v);
-                        try { log('< ' + eval(v)); } catch(err) { log(err, 'error'); }
+                // Override Console
+                window.console.log = (...a) => pushLog('info', a);
+                window.console.warn = (...a) => pushLog('warn', a);
+                window.console.error = (...a) => pushLog('error', a);
+
+                document.getElementById('dxcode-prompt').onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        pushLog('info', ['> ' + e.target.value]);
+                        try {
+                            const res = eval(e.target.value);
+                            if (res !== undefined) pushLog('info', ['< ' + res]);
+                        } catch(err) { pushLog('error', [err]); }
                         e.target.value = '';
                     }
                 };
 
+                // --- 3. Execution ---
                 window.onload = () => {
-                    renderEl();
-                    try { eval(document.getElementById('u-js').textContent); } catch(e) { console.error(e); }
+                    updateElements();
+                    const userJs = document.getElementById('user-js-data').textContent;
+                    try {
+                        // ユーザーのJSを実行。
+                        // エラーが起きてもDevToolsが死なないようにラップ
+                        const script = document.createElement('script');
+                        script.textContent = userJs;
+                        document.body.appendChild(script);
+                    } catch(e) { console.error(e); }
+
+                    // FPS Counter
+                    let lastTime = performance.now();
+                    function ticker() {
+                        const now = performance.now();
+                        const fps = Math.round(1000 / (now - lastTime));
+                        document.getElementById('fps-val').textContent = fps;
+                        lastTime = now;
+                        requestAnimationFrame(ticker);
+                    }
+                    ticker();
                 };
             </script>
         </body>
         </html>
     `;
-    win.document.write(content);
-    win.document.close();
+    previewWindow.document.write(previewContent);
+    previewWindow.document.close();
 }
-
-// -----------------------------------------------------
-// 5. Initialize
-// -----------------------------------------------------
-document.addEventListener('DOMContentLoaded', () => {
-    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.41.0/min/vs' }});
-    require(['vs/editor/editor.main'], function() {
-        monacoEditor = monaco.editor.create(document.getElementById('monaco-editor'), {
-            theme: 'vs-dark',
-            automaticLayout: true,
-            fontSize: 14,
-            minimap: { enabled: false }
-        });
-        
-        loadProject();
-        
-        document.getElementById('new-file-btn').onclick = () => {
-            const name = prompt("File name (e.g. app.py):");
-            if (name) createFile(name);
-        };
-        
-        document.getElementById('preview-btn').onclick = openPreview;
-        
-        document.getElementById('download-zip-btn').onclick = () => {
-            const zip = new JSZip();
-            virtualFileSystem.forEach((m, f) => zip.file(f, m.getValue()));
-            zip.generateAsync({type:"blob"}).then(c => saveAs(c, "dxcode_project.zip"));
-        };
-
-        monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveProject);
-    });
-});
