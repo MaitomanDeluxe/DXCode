@@ -1,19 +1,20 @@
 :root {
     /* VS Code Dark Default Color Palette */
-    --bg-main: #1e1e1e;          /* メイン背景 (エディタ以外) */
+    --bg-main: #1e1e1e;          /* メイン背景 */
     --bg-editor: #1e1e1e;        /* エディタ背景 */
-    --bg-secondary: #252526;     /* エディタタブ・サイドバー背景 */
-    --bg-activity: #333333;      /* アクティビティバー (左端) */
-    --bg-status: #007acc;        /* ステータスバー (下部 水色) */
-    --bg-menu: #3c3c3c;          /* メニューバー背景 */
+    --bg-secondary: #252526;     /* サイドバー・タブ背景 */
+    --bg-activity: #333333;      /* アクティビティバー */
+    --bg-status: #007acc;        /* ステータスバー */
+    --bg-menu: #3c3c3c;          /* メニューバー */
     
-    --text-color: #cccccc;       /* 標準テキスト色 */
-    --text-inactive: #808080;    /* 非アクティブなテキスト色 */
-    --accent-color: #007acc;     /* アクセント色 (青) */
-    --active-item-bg: #006080;   /* アクティブなアイテムの背景 */
+    --text-color: #cccccc;       /* 標準テキスト */
+    --text-inactive: #808080;    /* 非アクティブテキスト */
+    --accent-color: #007acc;     /* 青アクセント */
+    --hover-bg: #2a2d2e;         /* リストホバー時 */
+    --active-item-bg: #37373d;   /* アクティブアイテム背景 */
     --border-color: #333333;     /* 境界線 */
 
-    --font-ui: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    --font-ui: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
 }
 
 * {
@@ -27,193 +28,154 @@ html, body, #app-container {
     height: 100%;
     overflow: hidden;
     background-color: var(--bg-main);
+    color: var(--text-color);
 }
 
+/* --- レイアウト構造 --- */
 #app-container {
     display: flex;
     flex-direction: column;
 }
 
-/* --- ツールバー (メニューバー) --- */
 #menu-bar {
     height: 30px;
     background-color: var(--bg-menu);
-    color: var(--text-color);
     display: flex;
     align-items: center;
     padding: 0 10px;
     font-size: 13px;
-    border-bottom: 1px solid #000;
-    z-index: 10;
-    position: relative;
+    z-index: 100;
 }
 
-.menu-item {
-    position: relative;
-    padding: 5px 8px;
-    cursor: pointer;
-    user-select: none;
-    z-index: 10;
-}
-.menu-item:hover, .menu-item.active { 
-    background-color: rgba(90, 93, 94, 0.31);
-}
-
-/* --- ドロップダウンメニューパネル --- */
-.dropdown-menu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 250px;
-    background-color: var(--bg-secondary);
-    color: var(--text-color);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
-    border: 1px solid #000;
-    padding: 5px 0;
-    z-index: 20;
-    display: none;
-}
-.dropdown-menu.visible {
-    display: block;
-}
-
-.menu-option {
-    padding: 5px 15px 5px 30px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    height: 28px;
-}
-.menu-option:hover {
-    background-color: var(--active-item-bg);
-}
-
-.menu-option span:first-child i {
-    margin-right: 8px;
-    width: 15px; /* アイコンの幅を統一 */
-}
-
-.menu-shortcut {
-    color: var(--text-inactive);
-    font-size: 12px;
-}
-
-.menu-separator {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 5px 0;
-}
-
-
-/* --- ワークスペース --- */
-#workspace {
-    display: flex;
+#main-content {
     flex-grow: 1;
+    display: flex;
     overflow: hidden;
 }
 
-/* --- アクティビティバー (左端アイコンバー) --- */
+/* --- アクティビティバー (左端) --- */
 #activity-bar {
     width: 50px;
     background-color: var(--bg-activity);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-top: 5px;
-    border-right: 1px solid #000;
+    padding-top: 10px;
 }
 
 .activity-icon {
     width: 50px;
-    height: 48px;
-    line-height: 48px;
-    text-align: center;
-    font-size: 20px;
-    color: var(--text-color);
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    color: var(--text-inactive);
     cursor: pointer;
-    opacity: 0.6;
-}
-.activity-icon:hover, .activity-icon.active {
-    opacity: 1;
-}
-.activity-icon.active {
-    border-left: 2px solid white;
-    margin-left: -2px;
-    color: white;
+    transition: color 0.2s;
 }
 
+.activity-icon:hover {
+    color: #fff;
+}
+
+.activity-icon.active {
+    color: #fff;
+    border-left: 2px solid #fff;
+}
 
 /* --- サイドバー (エクスプローラー) --- */
 #sidebar-container {
-    width: 250px;
+    width: 260px;
     background-color: var(--bg-secondary);
-    color: var(--text-color);
-    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    font-size: 13px;
+    border-right: 1px solid var(--border-color);
 }
 
 #sidebar-header {
-    padding: 8px 10px;
-    text-transform: uppercase;
+    padding: 10px 20px;
+    font-size: 11px;
     font-weight: bold;
+    text-transform: uppercase;
     color: var(--text-inactive);
-    border-bottom: 1px solid var(--border-color);
+    letter-spacing: 1px;
 }
 
 .explorer-section {
-    padding: 5px 0;
     flex-grow: 1;
     overflow-y: auto;
 }
 
-/* ファイルリスト */
-#file-list {
-    list-style: none;
-    font-size: 13px;
-    padding-bottom: 5px;
+#action-buttons {
+    padding: 8px 12px;
+    display: flex;
+    gap: 6px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-#file-list li {
-    padding: 2px 15px;
+#action-buttons button {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 3px;
+    font-size: 12px;
+    color: white;
     cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+#new-file-btn { background-color: var(--accent-color); }
+#download-zip-btn { background-color: #444; }
+#preview-btn { background-color: #28a745; }
+
+#action-buttons button:hover {
+    opacity: 0.8;
+}
+
+/* --- エクスプローラー リストデザイン (重要) --- */
+#file-list {
+    list-style: none;
+    padding-top: 5px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-color);
+    transition: background 0.1s;
+}
+
+.file-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.file-item.active {
+    background-color: var(--active-item-bg);
+    color: #fff;
+}
+
+.indent-guide {
+    width: 12px; /* 階層の深さを表現する余白 */
+    height: 100%;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    margin-right: 8px;
+}
+
+.file-icon {
+    width: 18px;
+    text-align: center;
+    margin-right: 6px;
+    font-size: 14px;
+}
+
+.file-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 22px;
-}
-
-#file-list li:hover {
-    background-color: #2a2d2e;
-}
-
-#file-list li.active {
-    background-color: var(--active-item-bg);
-}
-
-/* サイドバー内のボタン */
-#new-file-btn, #download-zip-btn, #preview-btn {
-    padding: 6px 8px;
-    color: white;
-    border: none;
-    cursor: pointer;
-    border-radius: 3px;
-    font-size: 12px;
-    margin-right: 5px;
-}
-#new-file-btn { background-color: var(--accent-color); }
-#download-zip-btn { background-color: #555; }
-#preview-btn { background-color: #4CAF50; }
-
-#action-buttons {
-    padding: 8px 10px 10px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
 }
 
 /* --- エディタエリア --- */
@@ -228,48 +190,79 @@ html, body, #app-container {
 #tab-bar {
     height: 35px;
     background-color: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
     display: flex;
     overflow-x: auto;
-    flex-shrink: 0;
+    scrollbar-width: none; /* Firefox */
+}
+
+#tab-bar::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
 }
 
 .tab {
-    padding: 8px 15px;
-    border-right: 1px solid #000;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    height: 35px;
+    min-width: 120px;
+    max-width: 200px;
+    background-color: #2d2d2d;
+    border-right: 1px solid var(--bg-main);
     color: var(--text-inactive);
+    font-size: 12px;
     cursor: pointer;
-    background-color: var(--bg-secondary);
     white-space: nowrap;
-    font-size: 13px;
 }
 
 .tab.active {
     background-color: var(--bg-editor);
-    color: var(--text-color);
+    color: #fff;
+    border-top: 1px solid var(--accent-color);
+}
+
+.tab .file-icon {
+    font-size: 12px;
 }
 
 #monaco-editor {
     flex-grow: 1;
+    width: 100%;
 }
 
-/* --- ステータスバー (下部の水色バー) --- */
+/* --- ステータスバー --- */
 #status-bar {
     height: 22px;
     background-color: var(--bg-status);
-    color: white;
     display: flex;
     align-items: center;
-    padding: 0 5px;
+    padding: 0 10px;
     font-size: 12px;
-    z-index: 10;
-    flex-shrink: 0;
+    color: white;
 }
 
 .status-item {
-    padding: 0 6px;
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
     cursor: pointer;
 }
+
 .status-item:hover {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* スクロールバーのカスタマイズ (VS Code風) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: #444;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
 }
