@@ -27,7 +27,7 @@ async function loadProject() {
     const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll();
     req.onsuccess = () => {
         if (req.result.length === 0) {
-            createFile('index.html', '<!DOCTYPE html>\n<html>\n<body>\n  <h1>Hello DXCode</h1>\n  <script>\n    console.log("エディタのコンソールに表示されます！");\n    console.error("エラーも取得可能です。");\n  </script>\n</body>\n</html>');
+            createFile('index.html', '');
         } else {
             req.result.forEach(f => createFile(f.fileName, f.content));
         }
