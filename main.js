@@ -170,3 +170,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
     });
 });
+
+
+
+
+
+document.getElementById('copy-all-btn').addEventListener('click', () => {
+    // Monacoエディタの内容を取得
+    const editorContent = editor.getValue(); // editorはmonacoエディタのインスタンス
+    navigator.clipboard.writeText(editorContent).then(() => {
+        alert('ファイル内容をコピーしました');
+    }).catch(err => {
+        console.error('コピーに失敗しました', err);
+        alert('コピーに失敗しました');
+    });
+});
